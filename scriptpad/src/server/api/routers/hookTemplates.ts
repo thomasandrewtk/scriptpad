@@ -3,20 +3,31 @@ import { and, eq, desc } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { hookTemplates } from "~/server/db/schema";
+import { hookTemplates, tags } from "~/server/db/schema";
 
 export const hookTemplatesRouter = createTRPCRouter({
   /**
-   * List all hook templates for the authenticated user.
+   * List all hook templates for the authenticated user, with their associated tag.
    */
   list: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
 
-    return ctx.db
-      .select()
+    const rows = await ctx.db
+      .select({
+        id: hookTemplates.id,
+        userId: hookTemplates.userId,
+        body: hookTemplates.body,
+        tagId: hookTemplates.tagId,
+        createdAt: hookTemplates.createdAt,
+        tagName: tags.name,
+        tagColor: tags.color,
+      })
       .from(hookTemplates)
+      .leftJoin(tags, eq(hookTemplates.tagId, tags.id))
       .where(eq(hookTemplates.userId, userId))
       .orderBy(desc(hookTemplates.createdAt));
+
+    return rows;
   }),
 
   /**
@@ -25,8 +36,8 @@ export const hookTemplatesRouter = createTRPCRouter({
   create: protectedProcedure
     .input(
       z.object({
-        title: z.string().max(255).optional(),
         body: z.string().min(1),
+        tagId: z.string().uuid().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -36,8 +47,8 @@ export const hookTemplatesRouter = createTRPCRouter({
         .insert(hookTemplates)
         .values({
           userId,
-          title: input.title ?? null,
           body: input.body,
+          tagId: input.tagId ?? null,
         })
         .returning();
 
@@ -51,16 +62,16 @@ export const hookTemplatesRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string().uuid(),
-        title: z.string().max(255).optional(),
         body: z.string().min(1).optional(),
+        tagId: z.string().uuid().nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
 
       const updateData: Record<string, unknown> = {};
-      if (input.title !== undefined) updateData.title = input.title;
       if (input.body !== undefined) updateData.body = input.body;
+      if (input.tagId !== undefined) updateData.tagId = input.tagId;
 
       const [updated] = await ctx.db
         .update(hookTemplates)

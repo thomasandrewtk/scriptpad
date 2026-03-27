@@ -7,42 +7,32 @@ type EmptyStateVariant = "no-scripts" | "no-results" | "no-status";
 interface EmptyStateProps {
   variant: EmptyStateVariant;
   statusLabel?: string;
+  searchQuery?: string;
 }
 
-const EMPTY_STATES: Record<
-  EmptyStateVariant,
-  {
-    icon: typeof FileText;
-    title: string;
-    description: string | ((label?: string) => string);
-  }
-> = {
-  "no-scripts": {
-    icon: FileText,
-    title: "No scripts yet",
-    description:
-      "Tap the + button to create your first script and start writing.",
-  },
-  "no-results": {
-    icon: Search,
-    title: "No results found",
-    description: "Try adjusting your search terms or clearing your filters.",
-  },
-  "no-status": {
-    icon: Filter,
-    title: "No scripts here",
-    description: (label) =>
-      `You don't have any scripts with "${label ?? "this"}" status yet.`,
-  },
-};
+export function EmptyState({ variant, statusLabel, searchQuery }: EmptyStateProps) {
+  const configs: Record<EmptyStateVariant, { icon: typeof FileText; title: string; description: string }> = {
+    "no-scripts": {
+      icon: FileText,
+      title: "No scripts yet",
+      description: "Hit the + button to capture your first idea.",
+    },
+    "no-results": {
+      icon: Search,
+      title: "No results found",
+      description: searchQuery
+        ? `No scripts match '${searchQuery}'. Try a different search or check your filters.`
+        : "No scripts match your search. Try a different search or check your filters.",
+    },
+    "no-status": {
+      icon: Filter,
+      title: `No scripts in ${statusLabel ?? "this status"}`,
+      description: "No scripts in " + (statusLabel ?? "this status") + ". Scripts will appear here as you move them along.",
+    },
+  };
 
-export function EmptyState({ variant, statusLabel }: EmptyStateProps) {
-  const config = EMPTY_STATES[variant];
+  const config = configs[variant];
   const Icon = config.icon;
-  const description =
-    typeof config.description === "function"
-      ? config.description(statusLabel)
-      : config.description;
 
   return (
     <div className="flex min-h-[400px] flex-col items-center justify-center px-4 text-center">
@@ -53,7 +43,7 @@ export function EmptyState({ variant, statusLabel }: EmptyStateProps) {
         {config.title}
       </h3>
       <p className="mt-1.5 max-w-sm text-sm text-[var(--color-text-muted)]">
-        {description}
+        {config.description}
       </p>
     </div>
   );

@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FolderOpen } from "lucide-react";
+import { FolderOpen, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { useSidebarStore } from "~/stores/sidebar-store";
 
@@ -10,6 +12,33 @@ export function SidebarFolders() {
   const pathname = usePathname();
   const { isCollapsed } = useSidebarStore();
   const { data, isLoading } = api.folders.list.useQuery();
+  const utils = api.useUtils();
+
+  // Quick-create state
+  const [isCreating, setIsCreating] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const createRef = useRef<HTMLInputElement>(null);
+
+  const createFolder = api.folders.create.useMutation({
+    onSuccess: () => {
+      void utils.folders.list.invalidate();
+      setIsCreating(false);
+      setCreateName("");
+      toast.success("Folder created");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  useEffect(() => {
+    if (isCreating) {
+      requestAnimationFrame(() => createRef.current?.focus());
+    }
+  }, [isCreating]);
+
+  function handleCreate() {
+    if (!createName.trim() || createFolder.isPending) return;
+    createFolder.mutate({ name: createName.trim() });
+  }
 
   return (
     <div className="mt-4">
@@ -25,12 +54,27 @@ export function SidebarFolders() {
         <FolderOpen size={14} className="shrink-0" />
         <span
           className={[
-            "hidden max-md:inline",
+            "hidden flex-1 max-md:inline",
             isCollapsed ? "" : "lg:inline",
           ].join(" ")}
         >
           Folders
         </span>
+        {/* Quick-create button (hidden when collapsed on desktop) */}
+        <button
+          onClick={() => {
+            setIsCreating(true);
+            setCreateName("");
+          }}
+          className={[
+            "cursor-pointer rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-primary)]",
+            "hidden max-md:inline-flex",
+            isCollapsed ? "" : "lg:inline-flex",
+          ].join(" ")}
+          aria-label="New folder"
+        >
+          <Plus size={13} />
+        </button>
       </div>
 
       {/* Loading skeleton */}
@@ -106,6 +150,48 @@ export function SidebarFolders() {
               </Link>
             );
           })}
+
+          {/* Inline create */}
+          {isCreating && (
+            <div
+              className={[
+                "flex items-center rounded-lg",
+                "max-md:px-3 max-md:py-1.5",
+                "md:p-2",
+                isCollapsed ? "" : "lg:px-3 lg:py-1.5",
+              ].join(" ")}
+            >
+              <input
+                ref={createRef}
+                type="text"
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleCreate();
+                  }
+                  if (e.key === "Escape") {
+                    setIsCreating(false);
+                    setCreateName("");
+                  }
+                }}
+                onBlur={() => {
+                  if (!createName.trim()) {
+                    setIsCreating(false);
+                    setCreateName("");
+                  }
+                }}
+                placeholder="Folder name..."
+                className={[
+                  "w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] outline-none focus:border-[var(--color-accent)]",
+                  "hidden max-md:block",
+                  isCollapsed ? "" : "lg:block",
+                ].join(" ")}
+                maxLength={255}
+              />
+            </div>
+          )}
 
           {/* Uncategorized */}
           {data.uncategorizedCount > 0 && (

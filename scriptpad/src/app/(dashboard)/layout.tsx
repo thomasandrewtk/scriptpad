@@ -3,7 +3,10 @@ import { auth } from "~/server/auth";
 import { Sidebar } from "~/app/_components/sidebar";
 import { MobileHeader } from "~/app/_components/mobile-header";
 import { Fab } from "~/app/_components/fab";
+import { QuickCaptureModal } from "~/app/_components/quick-capture-modal";
+import { QuickCaptureKeyboard } from "~/app/_components/quick-capture-keyboard";
 import { Toaster } from "sonner";
+import { OnboardingTour } from "~/app/_components/onboarding/onboarding-tour";
 
 export default async function DashboardLayout({
   children,
@@ -26,6 +29,9 @@ export default async function DashboardLayout({
         </main>
       </div>
       <Fab />
+      <OnboardingTour />
+      <QuickCaptureModal />
+      <QuickCaptureKeyboard />
       <Toaster
         theme="dark"
         position="bottom-left"

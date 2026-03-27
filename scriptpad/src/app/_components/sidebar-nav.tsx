@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FileText, Zap, Settings, Plus } from "lucide-react";
 import { useSidebarStore } from "~/stores/sidebar-store";
+import { useQuickCaptureStore } from "~/stores/quick-capture-store";
 
 const navItems = [
   { href: "/", label: "All Scripts", icon: FileText },
@@ -13,12 +14,17 @@ const navItems = [
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const { isCollapsed } = useSidebarStore();
+  const { isCollapsed, setMobileOpen } = useSidebarStore();
+  const openCapture = useQuickCaptureStore((s) => s.open);
 
   return (
     <nav className="flex flex-col gap-0.5">
       {/* Quick Capture button */}
       <button
+        onClick={() => {
+          setMobileOpen(false);
+          openCapture();
+        }}
         className={[
           "flex items-center rounded-lg transition-colors",
           "mb-2 cursor-pointer text-sm font-medium",

@@ -51,7 +51,7 @@ export function SidebarSearch() {
   }, []);
 
   return (
-    <div className="mb-2">
+    <div data-onboarding="search" className="mb-2">
       {/* Collapsed: centered search icon button */}
       <button
         onClick={() => {

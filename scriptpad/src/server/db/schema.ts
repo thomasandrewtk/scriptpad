@@ -291,8 +291,8 @@ export const hookTemplates = createTable(
       .varchar({ length: 255 })
       .notNull()
       .references(() => users.id),
-    title: d.varchar({ length: 255 }),
     body: d.text().notNull(),
+    tagId: d.uuid().references(() => tags.id, { onDelete: "set null" }),
     createdAt: d
       .timestamp({ withTimezone: true })
       .$defaultFn(() => new Date())
@@ -305,5 +305,9 @@ export const hookTemplatesRelations = relations(hookTemplates, ({ one }) => ({
   user: one(users, {
     fields: [hookTemplates.userId],
     references: [users.id],
+  }),
+  tag: one(tags, {
+    fields: [hookTemplates.tagId],
+    references: [tags.id],
   }),
 }));

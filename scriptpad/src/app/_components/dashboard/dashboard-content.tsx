@@ -96,6 +96,7 @@ export function DashboardContent({ folderId, tagId }: DashboardContentProps) {
                 ? STATUS_LABELS[activeStatus]
                 : undefined
             }
+            searchQuery={search}
           />
         ) : (
           <ScriptCardGrid>

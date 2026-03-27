@@ -400,39 +400,453 @@ SKIP_ENV_VALIDATION=1 pnpm typecheck → 0 TypeScript errors
 
 ---
 
-## Phase 5 — Quick Capture
+## Phase 5 — Quick Capture ✅
 
-**Status:** Not started
+**Completed:** March 27, 2026
+
+### What was built
+
+Minimal Quick Capture modal for instant script idea capture (title + notes → status: idea). Three trigger points all wired to a single Zustand store.
+
+1. **Quick Capture Store** (`src/stores/quick-capture-store.ts`)
+   - Zustand store: `isOpen`, `open()`, `close()`
+   - Shared by FAB, sidebar button, and keyboard shortcut
+
+2. **Quick Capture Modal** (`src/app/_components/quick-capture-modal.tsx`)
+   - Portal to `document.body` (same pattern as context menu)
+   - Backdrop: `bg-black/50`, click-to-close
+   - Panel: centered `max-w-md`, rounded-xl, elevated surface
+   - Title input (autoFocus, required, max 500 chars) + Notes textarea (3 rows, optional)
+   - Cancel + "Save as Idea" buttons (disabled when title empty or mutation pending)
+   - Calls `scripts.create` mutation → invalidates `scripts.list` + `scripts.statusCounts`
+   - Success toast with "Open" action link → navigates to `/script/${id}`
+   - Escape key closes, form resets on close
+   - Enter on title submits form
+   - Fade-in + zoom-in animation (200ms)
+
+3. **Keyboard Shortcut** (`src/app/_components/quick-capture-keyboard.tsx`)
+   - Global `Cmd/Ctrl+N` listener, `preventDefault()` blocks browser new window
+   - Skips on `/script/` pages (matches FAB visibility)
+
+4. **FAB wired** (`src/app/_components/fab.tsx`)
+   - `onClick` calls `useQuickCaptureStore.open()`
+
+5. **Sidebar Nav wired** (`src/app/_components/sidebar-nav.tsx`)
+   - Quick Capture button calls `openCapture()` + `setMobileOpen(false)` to close mobile sidebar
+
+6. **Layout updated** (`src/app/(dashboard)/layout.tsx`)
+   - `<QuickCaptureModal />` and `<QuickCaptureKeyboard />` mounted after `<Fab />`
+
+### Edge cases handled
+- Double-submit prevented: Save button disabled while `isPending`
+- Toast "Open" link uses script ID from `onSuccess` callback
+- Mobile: modal takes near-full width (`mx-4`)
+- No Cmd+N on script editor pages (pathname check)
+- Form state reset when modal closes
+
+### Verification
+```
+SKIP_ENV_VALIDATION=1 pnpm typecheck → 0 TypeScript errors
+```
+
+### Files created
+- `src/stores/quick-capture-store.ts`
+- `src/app/_components/quick-capture-modal.tsx`
+- `src/app/_components/quick-capture-keyboard.tsx`
+
+### Files modified
+- `src/app/_components/fab.tsx` — added onClick → store.open()
+- `src/app/_components/sidebar-nav.tsx` — added onClick → store.open() + close mobile sidebar
+- `src/app/(dashboard)/layout.tsx` — mounted QuickCaptureModal + QuickCaptureKeyboard
 
 ---
 
-## Phase 6 — Script Editor
+## Phase 5b — Quick Capture & FAB UI Fix ✅
 
-**Status:** Not started
+**Completed:** March 27, 2026
+
+### What was done
+
+Fixed Quick Capture modal rendering as a full-width bottom panel instead of a centered dialog, and removed the FAB's permanent pulse animation. Root cause: `animate-in`, `fade-in`, `zoom-in-95` classes come from the `tailwindcss-animate` plugin which is **not installed** — in Tailwind v4 these unknown classes produced unpredictable CSS that broke the modal's flex centering and width constraints.
+
+1. **Quick Capture Modal** (`quick-capture-modal.tsx`)
+   - Removed broken `tailwindcss-animate` classes from backdrop: `animate-in fade-in duration-200`
+   - Removed broken `tailwindcss-animate` classes from panel: `animate-in fade-in zoom-in-95 duration-200`
+   - Replaced with native CSS keyframe animations via Tailwind v4 arbitrary syntax:
+     - Backdrop: `animate-[modal-backdrop_200ms_ease-out_forwards]`
+     - Panel: `animate-[modal-panel_200ms_ease-out_forwards]`
+   - Layout classes (`fixed inset-0 z-50 flex items-center justify-center`, `max-w-md`, `rounded-xl`) were already correct — the stray animation classes were the sole cause of the broken rendering
+
+2. **globals.css** — Added two `@keyframes` definitions:
+   - `modal-backdrop`: opacity 0 → 1
+   - `modal-panel`: opacity 0 + scale(0.95) → opacity 1 + scale(1)
+
+3. **FAB** (`fab.tsx`)
+   - Removed `animate-pulse` and `hover:animate-none` — PRD says "pulse on first load (once)" but the implementation pulsed forever. The accent color + shadow already provide sufficient visibility.
+
+### Verification
+```
+SKIP_ENV_VALIDATION=1 pnpm typecheck → 0 TypeScript errors
+```
+
+### Files modified
+- `src/app/_components/quick-capture-modal.tsx`
+- `src/styles/globals.css`
+- `src/app/_components/fab.tsx`
 
 ---
 
-## Phase 7 — Folders & Tags Management
+## Phase 6 — Script Editor ✅
 
-**Status:** Not started
+**Completed:** March 27, 2026
+
+### What was built
+
+Full script editor — the core writing experience. TipTap rich text editor with auto-save, bubble menu, slash commands, metadata editing, notes, and file attachments.
+
+1. **Editor Store** (`src/stores/editor-store.ts`)
+   - Zustand store: `saveState` ("idle"|"saving"|"saved"), `wordCount`, `charCount`, `estimatedDurationSeconds`
+   - Shared across header (save indicator) and stats bar (live stats)
+
+2. **Supabase Client** (`src/lib/supabase-client.ts`)
+   - Browser-side Supabase client for Storage uploads using public env vars
+
+3. **Page Shell** (`src/app/(dashboard)/script/[id]/page.tsx`)
+   - Server component: awaits params.id, renders `<ScriptEditorPage scriptId={id} />`
+
+4. **Script Editor Page** (`src/app/_components/editor/script-editor-page.tsx`)
+   - Client orchestrator: fetches script via `scripts.getById`, manages auto-save
+   - **Auto-save:** 3-second debounce via `useRef<NodeJS.Timeout>` + `pendingRef` accumulating changed fields
+   - `scheduleAutoSave(fields)` — merges fields, resets 3s timer (for title, body, notes)
+   - `saveImmediate(fields)` — flushes immediately (for status, folder, tags, date)
+   - `flushSave()` / `flushSaveAsync()` — sends pending changes in one `scripts.update` call
+   - Flush on Cmd+S, flush before unload (via `navigator.sendBeacon`)
+   - Layout: flex column, scrollable content area with `max-w-3xl mx-auto`, fixed stats bar at bottom
+   - Loading skeleton + 404 error state
+
+5. **Editor Header** (`src/app/_components/editor/editor-header.tsx`)
+   - Back button (ArrowLeft): flush save async, invalidate lists, `router.back()`
+   - Status dropdown: portal-based, shows 4 statuses with colored dots, calls `scripts.updateStatus` immediately
+   - More menu (MoreHorizontal): Duplicate (→ navigate to new), Delete (→ navigate to `/`), timestamps (created/updated)
+
+6. **Editor Title** (`src/app/_components/editor/editor-title.tsx`)
+   - `<input>` styled as heading: `text-3xl font-bold`, `font-editor`, no border
+   - Placeholder: "Untitled Script", onChange → scheduleAutoSave({ title })
+
+7. **TipTap Editor** (`src/app/_components/editor/tiptap-editor.tsx`)
+   - Extensions: StarterKit (stripped: no heading/lists/blockquote/code), Underline, Placeholder, HorizontalRule, CustomKeymap (Mod-Shift-Minus → divider)
+   - **BubbleMenu:** Bold/Italic/Underline buttons with active state highlighting
+   - **onUpdate:** extracts JSON + plain text, computes local stats → Zustand, schedules auto-save
+   - `immediatelyRender: false` for SSR compatibility
+   - `isInitializedRef` prevents firing onUpdate during initial content load
+
+8. **Slash Command Menu** (`src/app/_components/editor/slash-command-menu.tsx`)
+   - Custom implementation using TipTap's transaction listener
+   - Detects `/` at start of line or after whitespace
+   - 4 commands: `/divider` (HR), `/hook` (template picker), `/date` (today's date), `/note` (focus notes)
+   - Arrow key navigation, Enter to execute, Escape to dismiss
+   - Portal positioned at cursor via `editor.view.coordsAtPos()`
+   - Deletes the `/...` text on command execution
+
+9. **Hook Template Picker** (`src/app/_components/editor/hook-template-picker.tsx`)
+   - Modal overlay triggered by `/hook` slash command
+   - Fetches `hookTemplates.list`, filterable by title/body
+   - On select: inserts template body text at cursor position
+
+10. **Metadata Row** (`src/app/_components/editor/metadata-row.tsx`)
+    - Compact row between title and editor: Folder selector, tag chips, date picker
+    - **Folder:** Button → portal dropdown from `folders.list` + "No Folder" option → immediate save
+    - **Tags:** Inline colored chips with ✕ remove. "+Add tag" button → TagPickerPopover
+    - **Post Date:** Styled button → hidden `<input type="date">` → immediate save. Clear (✕) sets null
+
+11. **Tag Picker Popover** (`src/app/_components/editor/tag-picker-popover.tsx`)
+    - Portal popover with text filter input
+    - Shows existing tags with checkmarks for applied ones, click to toggle
+    - "Create new tag" option at bottom → `tags.create` then `tags.addToScript`
+
+12. **Notes Field** (`src/app/_components/editor/notes-field.tsx`)
+    - Collapsible with chevron toggle, expanded if notes exist
+    - Auto-resizing textarea, plain text only
+    - `forwardRef` so `/note` slash command can `.focus()` it
+    - onChange → scheduleAutoSave({ notes })
+
+13. **Attachments Section** (`src/app/_components/editor/attachments-section.tsx`)
+    - Collapsible with chevron toggle (expanded if attachments exist)
+    - Upload: hidden file input accepting `image/*,video/*,audio/*`, 50MB limit
+    - Upload flow: Supabase Storage → `attachments.create` mutation
+    - File rows: type icon, filename, formatted size, delete button
+    - Preview portals: fullscreen lightbox for images, native players for video/audio
+    - Delete: removes from DB + Supabase Storage
+
+14. **Stats Bar** (`src/app/_components/editor/stats-bar.tsx`)
+    - Fixed footer: "N words · N characters · ~M:SS estimated duration"
+    - Font-mono for numbers, reads from Zustand store
+
+15. **Save Indicator** (`src/app/_components/editor/save-indicator.tsx`)
+    - "Saving..." with spinner, "Saved" with check (fades after 2s)
+
+16. **TipTap CSS** (`src/styles/globals.css`)
+    - `.tiptap-editor` styles: font-editor, 18px, 1.75 line-height, paragraph spacing
+    - HR styling, placeholder pseudo-element, bold/italic/underline rendering
+
+### Key design decisions
+- TipTap owns its ProseMirror state; React only reads via onUpdate (no double state management)
+- getById NOT invalidated on body auto-save (prevents TipTap re-initialization / cursor reset)
+- Content changes debounced (3s), metadata changes immediate
+- Slash commands via ProseMirror transaction listener (no @tiptap/suggestion dependency)
+- Date picker uses native `<input type="date">` behind styled button
+
+### Verification
+```
+SKIP_ENV_VALIDATION=1 pnpm typecheck → 0 TypeScript errors
+pnpm build → success (script/[id] route: 202KB first load JS)
+```
+
+### Files created
+- `src/stores/editor-store.ts`
+- `src/lib/supabase-client.ts`
+- `src/app/_components/editor/script-editor-page.tsx`
+- `src/app/_components/editor/editor-header.tsx`
+- `src/app/_components/editor/editor-title.tsx`
+- `src/app/_components/editor/tiptap-editor.tsx`
+- `src/app/_components/editor/slash-command-menu.tsx`
+- `src/app/_components/editor/hook-template-picker.tsx`
+- `src/app/_components/editor/metadata-row.tsx`
+- `src/app/_components/editor/tag-picker-popover.tsx`
+- `src/app/_components/editor/notes-field.tsx`
+- `src/app/_components/editor/attachments-section.tsx`
+- `src/app/_components/editor/stats-bar.tsx`
+- `src/app/_components/editor/save-indicator.tsx`
+
+### Files modified
+- `src/app/(dashboard)/script/[id]/page.tsx` — rewrote stub → render ScriptEditorPage
+- `src/styles/globals.css` — added TipTap editor styles + save animation
+
+---
+
+## Phase 6b — Editor Bugfixes ✅
+
+**Completed:** March 27, 2026
+
+### Bugs fixed
+
+1. **Cmd+Shift+D conflicted with macOS bookmark shortcut**
+   - Changed divider keyboard shortcut from `Mod-Shift-d` to `Mod-Shift-minus` (hyphen)
+   - Minus key is intuitive for a horizontal divider and doesn't conflict with any macOS system shortcut
+   - **File:** `src/app/_components/editor/tiptap-editor.tsx`
+
+2. **Escape key did not navigate to dashboard**
+   - Added a two-phase keydown listener to `script-editor-page.tsx`
+   - **Capture phase:** checks if any portal popover (`.fixed.z-50`) is in the DOM
+   - **Bubble phase:** if no popover is open, calls `handleBack()` which flushes pending saves and navigates back
+   - This ensures Escape closes popovers first (status dropdown, tag picker, etc.) before ever triggering navigation
+   - **File:** `src/app/_components/editor/script-editor-page.tsx`
+
+3. **"Invalid Compact JWS" error when uploading attachments**
+   - **Root cause:** The app uses NextAuth (not Supabase Auth), so the browser Supabase client had no valid JWT for Storage operations. The anon key alone cannot authenticate Storage uploads.
+   - **Fix:** Replaced client-side Supabase uploads with server-side API routes that use the Supabase service key:
+     - `POST /api/upload` — accepts multipart form data, authenticates via NextAuth session, uploads to Supabase Storage using service key, returns public URL.
+     - `POST /api/upload/delete` — deletes files from Storage via service key, verifies the storage path belongs to the authenticated user (path must start with `{userId}/`)
+   - Attachments component now uses `fetch("/api/upload", ...)` instead of the client-side Supabase SDK
+   - **Files created:** `src/app/api/upload/route.ts`, `src/app/api/upload/delete/route.ts`
+   - **File modified:** `src/app/_components/editor/attachments-section.tsx`
+
+4. **"Bucket not found" error when uploading attachments**
+   - **Root cause:** The Supabase Storage bucket `attachments` did not exist. The upload route attempted to upload to a non-existent bucket.
+   - **Fix:** Added auto-creation logic to `POST /api/upload` — before the first upload, the route checks `supabase.storage.listBuckets()` and creates the `attachments` bucket (public: true) if it's missing. This runs once; subsequent uploads skip creation since the bucket already exists.
+   - **File modified:** `src/app/api/upload/route.ts`
+
+### Verification
+```
+SKIP_ENV_VALIDATION=1 pnpm typecheck → 0 TypeScript errors
+```
+
+### Files created
+- `src/app/api/upload/route.ts` — server-side file upload route (service key)
+- `src/app/api/upload/delete/route.ts` — server-side file delete route (service key)
+
+### Files modified
+- `src/app/_components/editor/tiptap-editor.tsx` — changed divider shortcut to Mod-Shift-Minus
+- `src/app/_components/editor/script-editor-page.tsx` — added Escape key → dashboard navigation
+- `src/app/_components/editor/attachments-section.tsx` — switched from client Supabase to server API routes for upload/delete
+
+---
+
+## Phase 7 — Folders & Tags Management ✅
+
+**Completed:** March 27, 2026
+
+### What was built
+
+1. **Shared Constants & Reusable Components**
+   - `src/lib/tag-colors.ts` — 12 preset hex colors for tag color picker (blue, indigo, violet, pink, red, orange, amber, emerald, teal, cyan, gray, purple-light)
+   - `src/app/_components/confirm-dialog.tsx` — Reusable portal-based delete confirmation modal with danger/default variants, backdrop + panel animations
+   - `src/app/_components/settings/color-picker.tsx` — Inline 6×2 preset color grid with ring selection indicator
+
+2. **Settings Page (`/settings`)**
+   - `src/app/(dashboard)/settings/page.tsx` — Rewritten as `"use client"`, max-w-2xl centered layout with two section cards
+   - `src/app/_components/settings/folders-settings.tsx` — Full CRUD: inline create, inline rename, delete with confirmation dialog, script count badges, hover-reveal action icons
+   - `src/app/_components/settings/tags-settings.tsx` — Full CRUD: inline create with color picker, inline edit (name + color), delete with confirmation dialog, auto-selects first unused preset color
+
+3. **Sidebar Enhancements**
+   - `src/app/_components/sidebar-folders.tsx` — Added `+` button next to "Folders" header (hidden when collapsed), inline input for quick folder creation
+   - `src/app/_components/sidebar-tags.tsx` — Added `+` button next to "Tags" header (hidden when collapsed), portal popover with name input + color picker grid for quick tag creation
+
+4. **Tag Picker Color Cycling**
+   - `src/app/_components/editor/tag-picker-popover.tsx` — Imports `TAG_PRESET_COLORS`, auto-cycles color on inline tag create via `TAG_PRESET_COLORS[existingTags.length % length]` instead of hardcoded `#3B82F6`
+
+### Files created/modified
+
+- `src/lib/tag-colors.ts` — NEW
+- `src/app/_components/confirm-dialog.tsx` — NEW
+- `src/app/_components/settings/color-picker.tsx` — NEW
+- `src/app/_components/settings/folders-settings.tsx` — NEW
+- `src/app/_components/settings/tags-settings.tsx` — NEW
+- `src/app/(dashboard)/settings/page.tsx` — REWRITTEN
+- `src/app/_components/sidebar-folders.tsx` — MODIFIED
+- `src/app/_components/sidebar-tags.tsx` — MODIFIED
+- `src/app/_components/editor/tag-picker-popover.tsx` — MODIFIED
+
+### Verification
+
+- `SKIP_ENV_VALIDATION=1 pnpm typecheck` → 0 errors
 
 ---
 
 ## Phase 8 — Hook Templates
 
-**Status:** Not started
+**Status:** ✅ Complete
+
+### What was built
+Full Hook Templates management page at `/hooks` with tag association. Replaced `title` column with `tagId` FK to reuse the existing tag system.
+
+### Schema change
+- Removed `title` column from `hookTemplates` table
+- Added `tagId` column (UUID, FK → tags, `onDelete: "set null"`)
+- Added `tag` relation to `hookTemplatesRelations`
+
+### Features
+- Page header with Zap icon + "New Hook" accent button
+- Inline create form: body textarea + tag dropdown + Save/Cancel
+- Template list: each row shows quoted body text + tag pill (color dot + name)
+- Inline edit mode: replaces display row with pre-filled form
+- Delete with ConfirmDialog (danger variant, shows truncated body preview)
+- Skeleton loading state (3 pulsing rows)
+- Empty state: "No hook templates yet. Create one to speed up your script writing."
+- Success/error toasts via sonner
+- Hover-reveal Edit (Pencil) and Delete (Trash2) action buttons
+
+### Updated hook-template-picker
+- Search filters by body text and tag name (instead of title)
+- Shows tag color dot + name below each template in the picker
+
+### Patterns reused
+- CRUD state management from `folders-settings.tsx`
+- Inline editing from `tags-settings.tsx`
+- ConfirmDialog with danger variant
+- Page layout (`max-w-2xl`, centered) from settings page
+- Query invalidation via `api.useUtils()`
+
+### Files changed
+| File | Action |
+|------|--------|
+| `src/server/db/schema.ts` | Replaced `title` with `tagId` FK on hookTemplates |
+| `src/server/api/routers/hookTemplates.ts` | Updated CRUD for tagId, added tag join on list |
+| `src/app/(dashboard)/hooks/page.tsx` | Rewrite — stub → full page with tag picker |
+| `src/app/_components/editor/hook-template-picker.tsx` | Updated for tag-based display/search |
+| `BUILD_LOG.md` | Updated with Phase 8 details |
+
+### Verification
+- `SKIP_ENV_VALIDATION=1 pnpm typecheck` — 0 errors
+- `pnpm db:push` — schema applied (title dropped, tagId + FK created)
 
 ---
 
-## Phase 9 — Onboarding
+## Phase 9 — Onboarding Tour ✅
 
-**Status:** Not started
+**Completed:** March 27, 2026
+
+### What was built
+
+1. **User Preferences Router** (`src/server/api/routers/user.ts`)
+   - `getPreferences` (query) — returns JSONB `preferences` for authenticated user
+   - `updatePreferences` (mutation) — merges partial JSON into existing preferences via `COALESCE || jsonb`
+   - Registered in `src/server/api/root.ts` as `user: userRouter`
+
+2. **Onboarding Zustand Store** (`src/stores/onboarding-store.ts`)
+   - State: `currentStep`, `isActive`
+   - Actions: `start()`, `nextStep()`, `dismiss()`
+   - Pure client state; server persistence handled in tour component
+
+3. **Onboarding Tooltip** (`src/app/_components/onboarding/onboarding-tooltip.tsx`)
+   - Portal-rendered to `document.body` (matches existing modal/context menu pattern)
+   - Dynamic positioning via `getBoundingClientRect()` with viewport clamping
+   - Semi-transparent backdrop with spotlight cutout (box-shadow approach)
+   - CSS triangle arrow pointing to target element
+   - Step indicator (progress dots + "X of 3"), description, Next/Got it button, Skip tour link
+   - Recalculates on resize/scroll
+
+4. **Tour Orchestrator** (`src/app/_components/onboarding/onboarding-tour.tsx`)
+   - 3-step tour: FAB → Status Tabs → Search
+   - Queries `user.getPreferences` on mount; starts tour if `onboardingComplete !== true`
+   - Waits for target DOM elements via `requestAnimationFrame` loop
+   - Expands sidebar for search step if collapsed
+   - Auto-dismisses on navigation away from dashboard
+   - Persists `{ onboardingComplete: true }` on dismiss/complete
+
+5. **Data Attributes** on target elements:
+   - `fab.tsx` — `data-onboarding="fab"`
+   - `status-tabs.tsx` — `data-onboarding="status-tabs"`
+   - `sidebar-search.tsx` — `data-onboarding="search"`
+
+6. **CSS Additions** (`globals.css`)
+   - `@keyframes tooltip-enter` — fade in + translateY(4px→0)
+   - `.onboarding-tooltip-enter` animation class
+   - `.onboarding-spotlight` — z-index bump + accent ring glow
+
+7. **Layout Integration** — `<OnboardingTour />` mounted in dashboard layout alongside FAB
+
+### Files created
+- `src/server/api/routers/user.ts`
+- `src/stores/onboarding-store.ts`
+- `src/app/_components/onboarding/onboarding-tooltip.tsx`
+- `src/app/_components/onboarding/onboarding-tour.tsx`
+
+### Files modified
+- `src/server/api/root.ts` — registered user router
+- `src/app/(dashboard)/layout.tsx` — mounted OnboardingTour
+- `src/app/_components/fab.tsx` — data-onboarding attribute
+- `src/app/_components/dashboard/status-tabs.tsx` — data-onboarding attribute
+- `src/app/_components/sidebar-search.tsx` — data-onboarding attribute
+- `src/styles/globals.css` — tooltip animation + spotlight class
+
+### Test results
+- `SKIP_ENV_VALIDATION=1 pnpm typecheck` — 0 errors
 
 ---
 
 ## Phase 10 — Polish & Keyboard Shortcuts
 
-**Status:** Not started
+**Status:** ✅ Complete
+
+### What was built
+Three cosmetic polish items to align with the PRD:
+
+1. **Empty state wording** — Updated all three variants (`no-scripts`, `no-results`, `no-status`) to match PRD Section 4.3 text exactly. Added `searchQuery` prop to `EmptyState` so the `no-results` variant can display the query in quotes. Passed search query from `dashboard-content.tsx`.
+2. **FAB pulse-once animation** — Added `@keyframes fab-pulse` (scale 1 → 1.08 → 1, 600ms) in `globals.css` and applied `animate-[fab-pulse_600ms_ease-in-out_1]` to the FAB button so it pulses once on mount to draw attention (PRD Section 10.3).
+3. **StatusBadge transition** — Added `transition-colors duration-200` to the badge `<span>` for smooth color cross-fade on status change (PRD Section 10.3).
+
+All 8 keyboard shortcuts from PRD Section 12 were already implemented in Phase 9.
+
+### Files modified
+- `src/app/_components/dashboard/empty-state.tsx` — Updated wording + added `searchQuery` prop
+- `src/app/_components/dashboard/dashboard-content.tsx` — Pass `searchQuery` to `EmptyState`
+- `src/styles/globals.css` — Added `@keyframes fab-pulse`
+- `src/app/_components/fab.tsx` — Applied pulse-once animation class
+- `src/app/_components/dashboard/status-badge.tsx` — Added `transition-colors duration-200`
+
+### Test results
+- `SKIP_ENV_VALIDATION=1 pnpm typecheck` — 0 errors
 
 ---
 

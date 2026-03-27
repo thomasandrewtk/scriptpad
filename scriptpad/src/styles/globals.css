@@ -54,3 +54,94 @@
 ::selection {
   background-color: rgba(59, 130, 246, 0.3);
 }
+
+/* Modal animations */
+@keyframes modal-backdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-panel {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* TipTap Editor Styles */
+.tiptap-editor {
+  outline: none;
+  font-family: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--color-text-primary);
+  min-height: 300px;
+}
+
+.tiptap-editor p {
+  margin-bottom: 0.75em;
+}
+
+.tiptap-editor p:last-child {
+  margin-bottom: 0;
+}
+
+.tiptap-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-text-muted);
+  opacity: 0.4;
+  pointer-events: none;
+  height: 0;
+}
+
+.tiptap-editor hr {
+  border: none;
+  border-top: 1px solid var(--color-border-light);
+  margin: 1.5em 0;
+}
+
+.tiptap-editor strong {
+  font-weight: 700;
+}
+
+.tiptap-editor em {
+  font-style: italic;
+}
+
+.tiptap-editor u {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Onboarding tooltip animation */
+@keyframes tooltip-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.onboarding-tooltip-enter {
+  animation: tooltip-enter 250ms ease-out forwards;
+}
+
+.onboarding-spotlight {
+  position: relative;
+  z-index: 56;
+  box-shadow: 0 0 0 3px var(--color-accent), 0 0 12px rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+}
+
+/* Save indicator fade */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fade-in 200ms ease-out forwards;
+}
+
+/* FAB pulse-once animation */
+@keyframes fab-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}

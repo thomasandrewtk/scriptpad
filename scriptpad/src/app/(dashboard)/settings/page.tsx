@@ -1,13 +1,18 @@
+"use client";
+
+import { FoldersSettings } from "~/app/_components/settings/folders-settings";
+import { TagsSettings } from "~/app/_components/settings/tags-settings";
+
 export default function SettingsPage() {
   return (
-    <div className="flex min-h-full items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-          Settings
-        </h1>
-        <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-          Settings page coming in Phase 9.
-        </p>
+    <div className="mx-auto w-full max-w-2xl px-4 py-8">
+      <h1 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">
+        Settings
+      </h1>
+
+      <div className="flex flex-col gap-6">
+        <FoldersSettings />
+        <TagsSettings />
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ export function StatusTabs({ activeStatus, onStatusChange }: StatusTabsProps) {
   const { data: counts } = api.scripts.statusCounts.useQuery();
 
   return (
-    <div className="flex gap-1 overflow-x-auto">
+    <div data-onboarding="status-tabs" className="flex gap-1 overflow-x-auto">
       {TABS.map((tab) => {
         const isActive = activeStatus === tab.key;
         const count =
