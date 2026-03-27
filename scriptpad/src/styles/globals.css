@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  /* Typography */
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-editor: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  /* Colors — ScriptPad Dark Theme */
+  --color-bg-primary: #0F0F0F;
+  --color-bg-secondary: #1A1A1A;
+  --color-surface: #1E1E1E;
+  --color-surface-elevated: #252525;
+  --color-border: #2E2E2E;
+  --color-border-light: #333333;
+  --color-text-primary: #E5E5E5;
+  --color-text-muted: #9CA3AF;
+  --color-accent: #3B82F6;
+  --color-accent-hover: #2563EB;
+
+  /* Status colors */
+  --color-status-idea: #6B7280;
+  --color-status-writing: #F59E0B;
+  --color-status-ready: #10B981;
+  --color-status-posted: #6366F1;
+}
+
+/* Scrollbar styling for dark theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-light) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border-light);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Selection color */
+::selection {
+  background-color: rgba(59, 130, 246, 0.3);
+}
