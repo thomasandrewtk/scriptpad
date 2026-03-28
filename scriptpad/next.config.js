@@ -5,9 +5,7 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-let config = {
-  output: "standalone",
-};
+let config = {};
 
 // Bundle analyzer — run with ANALYZE=true pnpm build
 if (process.env.ANALYZE === "true") {
