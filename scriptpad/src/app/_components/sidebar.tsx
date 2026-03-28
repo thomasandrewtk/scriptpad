@@ -1,6 +1,7 @@
 "use client";
 
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, LogOut } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { useSidebarStore } from "~/stores/sidebar-store";
 import { SidebarSearch } from "./sidebar-search";
 import { SidebarNav } from "./sidebar-nav";
@@ -86,6 +87,27 @@ export function Sidebar() {
           <SidebarNav />
           <SidebarFolders />
           <SidebarTags />
+        </div>
+
+        {/* Sign out */}
+        <div className="shrink-0 border-t border-[var(--color-border)] px-2 py-3">
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className={[
+              "flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)]",
+              isCollapsed ? "lg:justify-center lg:px-0" : "",
+            ].join(" ")}
+          >
+            <LogOut size={18} />
+            <span
+              className={[
+                "md:hidden",
+                isCollapsed ? "lg:hidden" : "lg:inline",
+              ].join(" ")}
+            >
+              Sign Out
+            </span>
+          </button>
         </div>
       </aside>
     </>

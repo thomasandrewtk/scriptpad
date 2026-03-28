@@ -1,15 +1,50 @@
 import "~/styles/globals.css";
 
-import { type Metadata } from "next";
+import { type Metadata, type Viewport } from "next";
 import { DM_Sans, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/react";
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "ScriptPad",
+  metadataBase: new URL(appUrl),
+  title: {
+    default: "ScriptPad",
+    template: "%s | ScriptPad",
+  },
   description:
     "Write, organize, and schedule scripts for short-form content.",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
+  openGraph: {
+    type: "website",
+    siteName: "ScriptPad",
+    title: "ScriptPad",
+    description: "Write, organize, and schedule scripts for short-form content.",
+    url: "/",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "ScriptPad — Write scripts. Ship content. Stay organized.",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ScriptPad",
+    description: "Write, organize, and schedule scripts for short-form content.",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0F0F0F",
 };
 
 const dmSans = DM_Sans({

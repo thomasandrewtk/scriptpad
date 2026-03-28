@@ -850,6 +850,108 @@ All 8 keyboard shortcuts from PRD Section 12 were already implemented in Phase 9
 
 ---
 
+## Phase 11 — User Registration, Error Handling & Security Hardening ✅
+
+**Completed:** March 27, 2026
+
+### What was built
+
+1. **11.1 — User Registration Flow**
+   - Added `register` mutation to user router (`publicProcedure`) with email normalization, duplicate check, bcrypt hashing (12 rounds), and UUID generation
+   - Created sign-up page (`/auth/signup`) mirroring sign-in styling — Name (optional), Email, Password fields with tRPC mutation, auto-sign-in on success, error handling for duplicates/validation
+   - Added "Don't have an account? Sign up" link to sign-in page and "Already have an account? Sign in" link to sign-up page
+
+2. **11.2 — Error Boundaries & Loading States**
+   - Root error boundary (`src/app/error.tsx`) — full-screen centered layout with AlertTriangle icon, error message, "Try again" + "Go home" buttons
+   - Dashboard error boundary (`src/app/(dashboard)/error.tsx`) — same pattern, renders inside dashboard layout with "Back to dashboard" link
+   - Custom 404 page (`src/app/not-found.tsx`) — server component with large "404" text, description, "Go back home" accent button
+   - Dashboard loading skeleton (`src/app/(dashboard)/loading.tsx`) — skeleton status tabs + 6-card grid with animate-pulse, responsive 3/2/1 column layout
+
+3. **11.3 — Security Hardening**
+   - Next.js middleware (`src/middleware.ts`) with in-memory rate limiter (Map with periodic cleanup):
+     - Auth routes (`/auth/*`, `/api/auth/*`): 10 req/min per IP
+     - API routes (`/api/*`): 100 req/min per IP
+     - Returns 429 JSON when exceeded
+   - Security headers on all matched responses: CSP (self + inline styles + Google Fonts + Supabase storage), X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy, Permissions-Policy
+   - Upload MIME/extension validation: `ALLOWED_MIME_TYPES` set (images, video, audio) + `ALLOWED_EXTENSIONS` set with descriptive 400 errors
+
+### Files created/modified
+- `src/server/api/routers/user.ts` — added `register` procedure
+- `src/app/auth/signup/page.tsx` — **new** sign-up page
+- `src/app/auth/signin/page.tsx` — added sign-up link
+- `src/app/error.tsx` — **new** root error boundary
+- `src/app/(dashboard)/error.tsx` — **new** dashboard error boundary
+- `src/app/not-found.tsx` — **new** 404 page
+- `src/app/(dashboard)/loading.tsx` — **new** loading skeleton
+- `src/middleware.ts` — **new** rate limiting + security headers
+- `src/app/api/upload/route.ts` — added MIME/extension validation
+
+### Test results
+- `SKIP_ENV_VALIDATION=1 pnpm typecheck` — passes with no errors
+
+---
+
+## Phase 12 — Production Infrastructure & Deployment
+
+**Status:** ✅ Complete
+
+### 12.1 — Environment & Next.js Config
+- Added `NEXT_PUBLIC_APP_URL` to env schema (`src/env.js`) with `z.string().url().optional()`
+- Configured `next.config.js` with `output: "standalone"` for Docker-friendly builds
+- Added `images.remotePatterns` for Supabase Storage URL optimization via `next/image`
+- Updated `.env.example` with `NEXT_PUBLIC_APP_URL`
+
+### 12.2 — SEO & Meta Tags
+- Expanded `src/app/layout.tsx` metadata: `metadataBase`, `title.template`, full `openGraph` and `twitter` blocks, `robots`
+- Exported separate `viewport` with `themeColor: "#0F0F0F"` (Next.js 15 requirement)
+- Created `public/og-image.png` (1200×630, dark background, ScriptPad branding)
+- Created `public/robots.txt` (Allow `/`, Disallow `/api/` and `/auth/`)
+- Created `src/app/sitemap.ts` with single entry for landing page
+
+### 12.3 — Landing Page
+- Created `src/app/_components/landing-page.tsx` — full server component with two-column desktop layout:
+  - Hero: left-aligned headline + CTAs on left, stacked feature cards on right
+  - Workflow section: status visualization on left, CTA card on right
+  - `max-w-7xl` with wide padding to use full horizontal space; stacks vertically on mobile
+- Modified `src/app/(dashboard)/layout.tsx` — renders `<LandingPage />` instead of redirecting to `/auth/signin` for unauthenticated users
+- Updated `src/app/auth/signin/page.tsx` — "ScriptPad" heading now links back to `/`
+- Added sign-out button to sidebar footer (`signOut` from `next-auth/react`, `LogOut` icon, responsive to collapsed state)
+
+### 12.4 — Database Migrations
+- Added `out: "./drizzle"` to `drizzle.config.ts` for explicit migration output directory
+- Workflow: `pnpm db:push` for dev, `pnpm db:generate` → review SQL → `pnpm db:migrate` for production
+
+### Files modified
+- `src/env.js` — added `NEXT_PUBLIC_APP_URL` to client schema and runtimeEnv
+- `next.config.js` — standalone output + image remote patterns
+- `.env.example` — added `NEXT_PUBLIC_APP_URL`
+- `src/app/layout.tsx` — expanded metadata (OG, Twitter, viewport, robots)
+- `public/og-image.png` — **new** static OG image
+- `public/robots.txt` — **new** robots file
+- `src/app/sitemap.ts` — **new** sitemap route
+- `src/app/_components/landing-page.tsx` — **new** landing page component
+- `src/app/(dashboard)/layout.tsx` — render landing page for unauth users
+- `src/app/auth/signin/page.tsx` — heading links to `/`
+- `src/app/_components/sidebar.tsx` — added sign-out button in sidebar footer
+- `drizzle.config.ts` — explicit `out` directory
+
+### Test results
+- `SKIP_ENV_VALIDATION=1 pnpm typecheck` — passes with no errors
+
+---
+
+## Phase 13 — QA, Performance & Launch Readiness
+
+**Status:** Pending
+
+### Planned
+- 13.1 End-to-end QA pass (full feature checklist)
+- 13.2 Performance optimization (lazy load TipTap, hook picker, attachments)
+- 13.3 Final polish (toast consistency, empty states, mobile responsiveness)
+- 13.4 Launch checklist (secrets rotation, deployment verification)
+
+---
+
 ## Infrastructure Notes
 
 - **Node.js:** v20.20.2 (installed via nvm)

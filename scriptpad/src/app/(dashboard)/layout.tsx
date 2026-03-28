@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
 import { Sidebar } from "~/app/_components/sidebar";
 import { MobileHeader } from "~/app/_components/mobile-header";
@@ -7,6 +6,7 @@ import { QuickCaptureModal } from "~/app/_components/quick-capture-modal";
 import { QuickCaptureKeyboard } from "~/app/_components/quick-capture-keyboard";
 import { Toaster } from "sonner";
 import { OnboardingTour } from "~/app/_components/onboarding/onboarding-tour";
+import { LandingPage } from "~/app/_components/landing-page";
 
 export default async function DashboardLayout({
   children,
@@ -16,7 +16,7 @@ export default async function DashboardLayout({
   const session = await auth();
 
   if (!session?.user) {
-    redirect("/auth/signin");
+    return <LandingPage />;
   }
 
   return (

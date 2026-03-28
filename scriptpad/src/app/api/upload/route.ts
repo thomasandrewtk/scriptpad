@@ -5,6 +5,33 @@ import { env } from "~/env";
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
+const ALLOWED_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "video/mp4",
+  "video/quicktime",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/x-m4a",
+  "audio/wav",
+  "audio/wave",
+]);
+
+const ALLOWED_EXTENSIONS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".mp4",
+  ".mov",
+  ".mp3",
+  ".m4a",
+  ".wav",
+]);
+
 export async function POST(request: Request) {
   // Verify authentication
   const session = await auth();
@@ -56,6 +83,29 @@ export async function POST(request: Request) {
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
         { error: "File too large. Maximum size is 50MB." },
+        { status: 400 },
+      );
+    }
+
+    // Validate MIME type
+    if (!ALLOWED_MIME_TYPES.has(file.type)) {
+      return NextResponse.json(
+        {
+          error: `File type "${file.type}" is not allowed. Accepted types: images (PNG, JPG, GIF, WebP), videos (MP4, MOV), and audio (MP3, M4A, WAV).`,
+        },
+        { status: 400 },
+      );
+    }
+
+    // Validate file extension
+    const extension = file.name.includes(".")
+      ? `.${file.name.split(".").pop()?.toLowerCase()}`
+      : "";
+    if (!extension || !ALLOWED_EXTENSIONS.has(extension)) {
+      return NextResponse.json(
+        {
+          error: `File extension "${extension || "(none)"}" is not allowed. Accepted extensions: ${[...ALLOWED_EXTENSIONS].join(", ")}.`,
+        },
         { status: 400 },
       );
     }
