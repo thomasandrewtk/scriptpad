@@ -3,11 +3,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MoreHorizontal, Copy, Trash2, Clock } from "lucide-react";
+import {
+  ArrowLeft,
+  MoreHorizontal,
+  Copy,
+  Trash2,
+  Clock,
+  Download,
+  ClipboardCopy,
+  FileText,
+} from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/react";
+import {
+  exportToText,
+  copyToClipboard,
+  downloadAsFile,
+} from "./export-script";
 
 type ScriptStatus = "idea" | "writing" | "ready" | "posted";
 
@@ -211,6 +225,76 @@ export function EditorHeader({
             >
               <Copy size={14} />
               Duplicate
+            </button>
+
+            <div className="my-1 border-t border-[var(--color-border)]" />
+
+            {/* Export options */}
+            <button
+              onClick={async () => {
+                const text = exportToText(
+                  script.body as Record<string, unknown> | null,
+                  {
+                    includeAnnotations: false,
+                    includeSectionHeaders: true,
+                    title: script.title,
+                  },
+                );
+                const ok = await copyToClipboard(text);
+                toast.success(
+                  ok ? "Spoken text copied" : "Failed to copy",
+                );
+                setMoreOpen(false);
+              }}
+              className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)]"
+            >
+              <ClipboardCopy size={14} />
+              Copy spoken text
+            </button>
+            <button
+              onClick={async () => {
+                const text = exportToText(
+                  script.body as Record<string, unknown> | null,
+                  {
+                    includeAnnotations: true,
+                    includeSectionHeaders: true,
+                    title: script.title,
+                  },
+                );
+                const ok = await copyToClipboard(text);
+                toast.success(
+                  ok ? "Full script copied" : "Failed to copy",
+                );
+                setMoreOpen(false);
+              }}
+              className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)]"
+            >
+              <FileText size={14} />
+              Copy with annotations
+            </button>
+            <button
+              onClick={() => {
+                const text = exportToText(
+                  script.body as Record<string, unknown> | null,
+                  {
+                    includeAnnotations: true,
+                    includeSectionHeaders: true,
+                    title: script.title,
+                  },
+                );
+                const safeName = script.title
+                  .replace(/[^a-zA-Z0-9 ]/g, "")
+                  .trim()
+                  .replace(/\s+/g, "-")
+                  .toLowerCase();
+                downloadAsFile(text, `${safeName || "script"}.txt`);
+                toast.success("Script downloaded");
+                setMoreOpen(false);
+              }}
+              className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)]"
+            >
+              <Download size={14} />
+              Download as .txt
             </button>
 
             <div className="my-1 border-t border-[var(--color-border)]" />

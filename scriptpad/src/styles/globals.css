@@ -112,6 +112,295 @@
   text-underline-offset: 3px;
 }
 
+/* ─── Script Section Styles ─────────────────────────────────────────────── */
+
+.script-section {
+  margin: 1em 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--color-border);
+}
+
+.script-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px 6px 0 0;
+  user-select: none;
+}
+
+.script-section-collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0;
+  transition: background 150ms;
+}
+
+.script-section-collapse:hover {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.script-section-label {
+  font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.script-section-stats {
+  margin-left: auto;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+.script-section-content {
+  padding: 12px 16px;
+  transition: max-height 200ms ease, opacity 200ms ease;
+}
+
+.script-section-content p:first-child {
+  margin-top: 0;
+}
+
+/* ─── Scene Note Styles ─────────────────────────────────────────────────── */
+
+.scene-note-wrapper {
+  display: inline;
+}
+
+.scene-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  margin: 0 2px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 12px;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 12px;
+  color: #A78BFA;
+  cursor: pointer;
+  vertical-align: baseline;
+  line-height: 1.6;
+  transition: background 150ms, border-color 150ms;
+}
+
+.scene-note:hover {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.scene-note-selected {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
+}
+
+.scene-note-editing {
+  cursor: text;
+}
+
+.scene-note-icon {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.scene-note-text {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scene-note-input {
+  background: none;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  width: 180px;
+  min-width: 80px;
+  padding: 0;
+}
+
+.scene-note-input::placeholder {
+  color: rgba(167, 139, 250, 0.4);
+}
+
+/* ─── Hook Score Indicator ───────────────────────────────────────────────── */
+
+.script-section-hook-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ─── Line Variant Styles ───────────────────────────────────────────────── */
+
+.line-variant {
+  margin: 0.5em 0;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.03);
+  overflow: hidden;
+}
+
+.line-variant-active {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.line-variant-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.line-variant-counter {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  min-width: 24px;
+  text-align: center;
+}
+
+.line-variant-text {
+  flex: 1;
+  font-family: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--color-text-primary);
+  outline: none;
+  min-height: 1.75em;
+}
+
+.line-variant-text:focus {
+  outline: none;
+}
+
+.line-variant-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.line-variant-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 10px;
+  transition: background 150ms, color 150ms;
+}
+
+.line-variant-btn:hover {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.line-variant-list {
+  border-top: 1px solid var(--color-border);
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.line-variant-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.line-variant-item-active {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.line-variant-select {
+  width: 20px;
+  height: 20px;
+  font-weight: 600;
+}
+
+.line-variant-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-family: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  padding: 2px 0;
+}
+
+.line-variant-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.4;
+}
+
+.line-variant-remove {
+  opacity: 0.5;
+}
+
+.line-variant-remove:hover {
+  opacity: 1;
+  color: #EF4444;
+}
+
+/* ─── Timing Marks Styles ───────────────────────────────────────────────── */
+
+.timing-mark {
+  position: absolute;
+  left: -56px;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  opacity: 0.35;
+  user-select: none;
+  pointer-events: none;
+  line-height: 1.75;
+  width: 44px;
+  text-align: right;
+}
+
+/* Make editor paragraphs position-relative so timing marks can be absolute */
+.tiptap-editor p {
+  position: relative;
+}
+
 /* Onboarding tooltip animation */
 @keyframes tooltip-enter {
   from { opacity: 0; transform: translateY(4px); }

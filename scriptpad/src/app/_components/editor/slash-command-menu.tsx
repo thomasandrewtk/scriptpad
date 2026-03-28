@@ -3,7 +3,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
-import { Minus, Anchor, Calendar, StickyNote } from "lucide-react";
+import {
+  Minus,
+  Anchor,
+  Calendar,
+  StickyNote,
+  LayoutTemplate,
+  Camera,
+  Zap,
+  MessageSquare,
+  Layers,
+  Scissors,
+  ArrowRight,
+  GitBranch,
+} from "lucide-react";
 import type { Editor } from "@tiptap/react";
 
 const HookTemplatePicker = dynamic(
@@ -16,6 +29,60 @@ const HookTemplatePicker = dynamic(
 
 const COMMANDS = [
   {
+    id: "hook-section",
+    label: "Hook Section",
+    description: "Insert a Hook section block",
+    icon: Zap,
+  },
+  {
+    id: "body-section",
+    label: "Body Section",
+    description: "Insert a Body section block",
+    icon: MessageSquare,
+  },
+  {
+    id: "cta-section",
+    label: "CTA Section",
+    description: "Insert a CTA section block",
+    icon: Anchor,
+  },
+  {
+    id: "structure",
+    label: "Full Structure",
+    description: "Insert Hook + Body + CTA sections",
+    icon: Layers,
+  },
+  {
+    id: "scene",
+    label: "Scene Note",
+    description: "Insert a B-roll / scene annotation",
+    icon: Camera,
+  },
+  {
+    id: "broll",
+    label: "B-Roll",
+    description: "Insert a B-roll annotation",
+    icon: Camera,
+  },
+  {
+    id: "transition",
+    label: "Transition",
+    description: "Insert a transition annotation",
+    icon: ArrowRight,
+  },
+  {
+    id: "direction",
+    label: "Direction",
+    description: "Insert a direction note",
+    icon: Scissors,
+  },
+  {
+    id: "variant",
+    label: "Line Variant",
+    description: "Write alternate versions of a line",
+    icon: GitBranch,
+  },
+  {
     id: "divider",
     label: "Divider",
     description: "Insert a horizontal rule",
@@ -23,9 +90,9 @@ const COMMANDS = [
   },
   {
     id: "hook",
-    label: "Hook",
+    label: "Hook Template",
     description: "Insert a hook template",
-    icon: Anchor,
+    icon: LayoutTemplate,
   },
   {
     id: "date",
@@ -101,7 +168,11 @@ export function SlashCommandMenu({
 
       if (isOpen && slashStartRef.current !== null) {
         // Update query from typed text after "/"
-        const text = state.doc.textBetween(slashStartRef.current + 1, from, "");
+        const text = state.doc.textBetween(
+          slashStartRef.current + 1,
+          from,
+          "",
+        );
         setQuery(text);
         setSelectedIndex(0);
 
@@ -206,7 +277,7 @@ export function SlashCommandMenu({
         createPortal(
           <div
             ref={menuRef}
-            className="fixed z-50 w-[220px] overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] py-1 shadow-xl shadow-black/30"
+            className="fixed z-50 w-[260px] overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-elevated)] py-1 shadow-xl shadow-black/30"
             style={position}
           >
             {filteredCommands.map((cmd, index) => {

@@ -1,5 +1,18 @@
 import Link from "next/link";
-import { Zap, FileText, FolderOpen, ArrowRight } from "lucide-react";
+import {
+  Zap,
+  FileText,
+  FolderOpen,
+  ArrowRight,
+  Layers,
+  Camera,
+  Timer,
+  GitBranch,
+  Keyboard,
+  Monitor,
+  Sparkles,
+  Download,
+} from "lucide-react";
 
 const STATUS_STEPS = [
   { label: "Idea", color: "var(--color-status-idea)" },
@@ -10,22 +23,61 @@ const STATUS_STEPS = [
 
 const FEATURES = [
   {
-    icon: Zap,
-    title: "Quick Capture",
+    icon: Layers,
+    title: "Script Structure",
     description:
-      "Jot down ideas instantly with keyboard shortcuts. Never lose a thought again.",
+      "Hook, Body, CTA sections with per-section word counts and timing. Your script understands its own anatomy.",
   },
   {
-    icon: FileText,
-    title: "Rich Editor",
+    icon: Camera,
+    title: "Scene Annotations",
     description:
-      "Write with a distraction-free editor that auto-saves. Formatting without the fuss.",
+      "Inline B-roll, transition, and direction notes that live with your script but don't count toward spoken time.",
+  },
+  {
+    icon: Timer,
+    title: "Timing Marks",
+    description:
+      "See exactly where you'll be at 0:15, 0:30, 1:00. Paragraph-level timestamps computed at your speaking pace.",
+  },
+] as const;
+
+const POWER_FEATURES = [
+  {
+    icon: GitBranch,
+    title: "Line Variants",
+    description:
+      "Write multiple versions of any line. Toggle between them instantly. Only the active version counts.",
+  },
+  {
+    icon: Sparkles,
+    title: "Hook Scorer",
+    description:
+      "Real-time heuristic scoring for your hooks. See red/yellow/green strength indicators as you write.",
+  },
+  {
+    icon: Monitor,
+    title: "Teleprompter",
+    description:
+      "Full-screen auto-scroll at speaking pace. Mirror mode for hardware prompters. Scene notes dimmed.",
+  },
+  {
+    icon: Keyboard,
+    title: "Keyboard-First",
+    description:
+      "Cmd+Shift+H/B/C for sections, slash commands for everything, split view with Cmd+\\. Never leave the keyboard.",
+  },
+  {
+    icon: Download,
+    title: "Export",
+    description:
+      "Copy spoken-only text, full script with annotations, or download as .txt. Ready for any teleprompter app.",
   },
   {
     icon: FolderOpen,
     title: "Organize",
     description:
-      "Folders, tags, and statuses keep your scripts organized from idea to posted.",
+      "Folders, tags, statuses, and hook templates. Quick capture from anywhere. Auto-save everything.",
   },
 ] as const;
 
@@ -53,29 +105,32 @@ export function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero — split layout on desktop */}
+      {/* Hero */}
       <section className="mx-auto max-w-7xl px-6 pb-24 pt-16 lg:px-12 lg:pt-24">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
-          {/* Left: copy + CTAs */}
+          {/* Left: copy */}
           <div>
+            <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-medium text-[var(--color-text-muted)]">
+              <Zap size={12} className="text-[var(--color-accent)]" />
+              Built for short-form creators
+            </div>
             <h1 className="text-4xl font-bold leading-tight tracking-tight text-[var(--color-text-primary)] md:text-5xl xl:text-6xl">
-              Write scripts.
+              Write scripts
               <br />
-              Ship content.
+              that know their
               <br />
-              <span className="text-[var(--color-accent)]">Stay organized.</span>
+              <span className="text-[var(--color-accent)]">own structure.</span>
             </h1>
             <p className="mt-6 max-w-md text-lg text-[var(--color-text-muted)]">
-              A fast, focused writing app for short-form content creators.
-              Capture ideas, draft scripts, and track your workflow — all in one
-              place.
+              Not another notes app. A purpose-built script editor with Hook/Body/CTA
+              structure, B-roll annotations, timing marks, and a built-in teleprompter.
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
               <Link
                 href="/auth/signup"
                 className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--color-accent-hover)]"
               >
-                Get Started
+                Get Started Free
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
@@ -87,7 +142,7 @@ export function LandingPage() {
             </div>
           </div>
 
-          {/* Right: feature cards stacked vertically */}
+          {/* Right: hero feature cards */}
           <div className="flex flex-col gap-4">
             {FEATURES.map((feature) => (
               <div
@@ -111,8 +166,38 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Workflow + CTA — side by side on desktop */}
+      {/* Power Features Grid */}
       <section className="border-t border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-12">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold text-[var(--color-text-primary)]">
+              Everything a script needs. Nothing it doesn&apos;t.
+            </h2>
+            <p className="mt-3 text-[var(--color-text-muted)]">
+              Every feature exists to make your next script better than the last.
+            </p>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {POWER_FEATURES.map((feature) => (
+              <div
+                key={feature.title}
+                className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6"
+              >
+                <feature.icon className="mb-3 h-6 w-6 text-[var(--color-accent)]" />
+                <h3 className="mb-2 text-sm font-semibold text-[var(--color-text-primary)]">
+                  {feature.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Workflow + CTA */}
+      <section className="border-t border-[var(--color-border)]">
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 py-20 lg:grid-cols-2 lg:gap-20 lg:px-12">
           {/* Left: status workflow */}
           <div>
@@ -125,7 +210,10 @@ export function LandingPage() {
             </p>
             <div className="flex items-center gap-4 sm:gap-6">
               {STATUS_STEPS.map((step, i) => (
-                <div key={step.label} className="flex items-center gap-4 sm:gap-6">
+                <div
+                  key={step.label}
+                  className="flex items-center gap-4 sm:gap-6"
+                >
                   <div className="flex flex-col items-center gap-2">
                     <div
                       className="h-5 w-5 rounded-full"
@@ -146,10 +234,11 @@ export function LandingPage() {
           {/* Right: CTA card */}
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-10">
             <h2 className="mb-3 text-2xl font-bold text-[var(--color-text-primary)]">
-              Ready to start writing?
+              Ready to write better scripts?
             </h2>
             <p className="mb-6 text-sm text-[var(--color-text-muted)]">
-              Create your free account and start capturing ideas in seconds.
+              Create your free account and start writing with structure in
+              seconds.
             </p>
             <Link
               href="/auth/signup"

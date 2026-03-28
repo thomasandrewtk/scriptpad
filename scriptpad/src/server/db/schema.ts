@@ -162,6 +162,7 @@ export const scripts = createTable(
     wordCount: d.integer().notNull().default(0),
     charCount: d.integer().notNull().default(0),
     estimatedDurationSeconds: d.integer().notNull().default(0),
+    structureMetadata: d.jsonb().$type<Record<string, unknown>>(),
     folderId: d.uuid().references(() => folders.id, { onDelete: "set null" }),
     createdAt: d
       .timestamp({ withTimezone: true })
@@ -300,6 +301,39 @@ export const hookTemplates = createTable(
   }),
   (t) => [index("hook_template_user_id_idx").on(t.userId)],
 );
+
+// ─── AI Usage Tracking ──────────────────────────────────────────────────────
+
+export const aiUsage = createTable(
+  "ai_usage",
+  (d) => ({
+    id: d
+      .uuid()
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: d
+      .varchar({ length: 255 })
+      .notNull()
+      .references(() => users.id),
+    feature: d.varchar({ length: 100 }).notNull(), // 'punch_up', 'score_hook', etc.
+    inputTokens: d.integer().notNull().default(0),
+    outputTokens: d.integer().notNull().default(0),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (t) => [
+    index("ai_usage_user_id_idx").on(t.userId),
+    index("ai_usage_user_created_idx").on(t.userId, t.createdAt),
+  ],
+);
+
+export const aiUsageRelations = relations(aiUsage, ({ one }) => ({
+  user: one(users, { fields: [aiUsage.userId], references: [users.id] }),
+}));
+
+// ─── Relations (continued) ──────────────────────────────────────────────────
 
 export const hookTemplatesRelations = relations(hookTemplates, ({ one }) => ({
   user: one(users, {

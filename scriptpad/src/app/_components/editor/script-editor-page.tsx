@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
@@ -12,6 +12,11 @@ import { TiptapEditor } from "./tiptap-editor";
 import { NotesField } from "./notes-field";
 import { EditorSkeleton } from "./editor-skeleton";
 import { StatsBar } from "./stats-bar";
+import { KeyboardHelpModal } from "./keyboard-help-modal";
+import {
+  TeleprompterView,
+  extractTeleprompterContent,
+} from "./teleprompter-view";
 
 interface ScriptEditorPageProps {
   scriptId: string;
@@ -26,7 +31,19 @@ export function ScriptEditorPage({ scriptId }: ScriptEditorPageProps) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const notesRef = useRef<HTMLTextAreaElement>(null);
 
-  const { data: script, isLoading, error } = api.scripts.getById.useQuery(
+  // Feature toggles
+  const [isSplitView, setIsSplitView] = useState(false);
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  const [showTeleprompter, setShowTeleprompter] = useState(false);
+
+  // Store body JSON for teleprompter
+  const bodyJsonRef = useRef<Record<string, unknown> | null>(null);
+
+  const {
+    data: script,
+    isLoading,
+    error,
+  } = api.scripts.getById.useQuery(
     { id: scriptId },
     { refetchOnWindowFocus: false },
   );
@@ -51,6 +68,7 @@ export function ScriptEditorPage({ scriptId }: ScriptEditorPageProps) {
         charCount: script.charCount ?? 0,
         estimatedDurationSeconds: script.estimatedDurationSeconds ?? 0,
       });
+      bodyJsonRef.current = script.body as Record<string, unknown> | null;
     }
   }, [script, setStats]);
 
@@ -91,6 +109,11 @@ export function ScriptEditorPage({ scriptId }: ScriptEditorPageProps) {
     (fields: Record<string, unknown>) => {
       // Merge into pending
       pendingRef.current = { ...pendingRef.current, ...fields };
+
+      // Track body JSON for teleprompter
+      if (fields.body) {
+        bodyJsonRef.current = fields.body as Record<string, unknown>;
+      }
 
       // Reset the 3s timer
       if (timerRef.current) {
@@ -157,7 +180,7 @@ export function ScriptEditorPage({ scriptId }: ScriptEditorPageProps) {
     void utils.tags.list.invalidate();
   }, [utils, scriptId]);
 
-  // Escape key → navigate to dashboard (only when no popover is open)
+  // Global keyboard shortcuts
   const popoverOpenRef = useRef(false);
   useEffect(() => {
     function handleKeyDownCapture(e: KeyboardEvent) {
@@ -168,6 +191,28 @@ export function ScriptEditorPage({ scriptId }: ScriptEditorPageProps) {
       }
     }
     function handleKeyDown(e: KeyboardEvent) {
+      // Cmd+\ → toggle split view
+      if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
+        e.preventDefault();
+        setIsSplitView((v) => !v);
+        return;
+      }
+
+      // Cmd+? → keyboard help
+      if ((e.metaKey || e.ctrlKey) && e.key === "?") {
+        e.preventDefault();
+        setShowKeyboardHelp((v) => !v);
+        return;
+      }
+
+      // Cmd+Enter → teleprompter
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        setShowTeleprompter(true);
+        return;
+      }
+
+      // Escape → navigate to dashboard (only when no popover is open)
       if (e.key === "Escape" && !popoverOpenRef.current) {
         e.preventDefault();
         void handleBack();
@@ -210,6 +255,8 @@ export function ScriptEditorPage({ scriptId }: ScriptEditorPageProps) {
     );
   }
 
+  const teleprompterContent = extractTeleprompterContent(bodyJsonRef.current);
+
   return (
     <div className="flex h-full flex-col">
       <EditorHeader
@@ -218,37 +265,113 @@ export function ScriptEditorPage({ scriptId }: ScriptEditorPageProps) {
         onMetadataChange={handleMetadataChange}
       />
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-3xl px-6 py-8">
-          <EditorTitle
-            initialTitle={script.title}
-            onTitleChange={(title) => scheduleAutoSave({ title })}
-          />
+      <div className="flex flex-1 overflow-hidden">
+        {/* Main editor panel */}
+        <div className="flex-1 overflow-y-auto">
+          <div
+            className={`mx-auto w-full px-6 py-8 ${
+              isSplitView ? "max-w-3xl" : "max-w-3xl"
+            }`}
+          >
+            <EditorTitle
+              initialTitle={script.title}
+              onTitleChange={(title) => scheduleAutoSave({ title })}
+            />
 
-          <MetadataRow
-            script={script}
-            onMetadataChange={handleMetadataChange}
-            onImmediateSave={saveImmediate}
-          />
+            <MetadataRow
+              script={script}
+              onMetadataChange={handleMetadataChange}
+              onImmediateSave={saveImmediate}
+            />
 
-          <TiptapEditor
-            initialContent={script.body}
-            onContentChange={(body, bodyPlainText) =>
-              scheduleAutoSave({ body, bodyPlainText })
-            }
-            onForceSave={flushSave}
-            notesRef={notesRef}
-          />
+            <TiptapEditor
+              initialContent={script.body}
+              onContentChange={(body, bodyPlainText) =>
+                scheduleAutoSave({ body, bodyPlainText })
+              }
+              onForceSave={flushSave}
+              notesRef={notesRef}
+            />
 
-          <NotesField
-            ref={notesRef}
-            initialNotes={script.notes}
-            onNotesChange={(notes) => scheduleAutoSave({ notes })}
-          />
+            <NotesField
+              ref={notesRef}
+              initialNotes={script.notes}
+              onNotesChange={(notes) => scheduleAutoSave({ notes })}
+            />
+          </div>
         </div>
+
+        {/* Split view right panel */}
+        {isSplitView && (
+          <div className="hidden w-80 flex-shrink-0 overflow-y-auto border-l border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 lg:block">
+            <div className="space-y-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                Script Notes
+              </h3>
+              <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">
+                {script.notes || "No notes yet. Add notes below the editor."}
+              </p>
+
+              <div className="border-t border-[var(--color-border)] pt-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                  Quick Actions
+                </h3>
+                <div className="mt-2 space-y-2">
+                  <button
+                    onClick={() => setShowTeleprompter(true)}
+                    className="w-full cursor-pointer rounded-lg border border-[var(--color-border)] px-3 py-2 text-left text-sm text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface)]"
+                  >
+                    Teleprompter Mode
+                  </button>
+                  <button
+                    onClick={() => setShowKeyboardHelp(true)}
+                    className="w-full cursor-pointer rounded-lg border border-[var(--color-border)] px-3 py-2 text-left text-sm text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface)]"
+                  >
+                    Keyboard Shortcuts
+                  </button>
+                </div>
+              </div>
+
+              {script.tags && script.tags.length > 0 && (
+                <div className="border-t border-[var(--color-border)] pt-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                    Tags
+                  </h3>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {script.tags.map((tag) => (
+                      <span
+                        key={tag.id}
+                        className="rounded-full px-2 py-0.5 text-xs font-medium"
+                        style={{
+                          backgroundColor: `${tag.color}20`,
+                          color: tag.color,
+                        }}
+                      >
+                        {tag.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <StatsBar />
+
+      {/* Keyboard help modal */}
+      <KeyboardHelpModal
+        isOpen={showKeyboardHelp}
+        onClose={() => setShowKeyboardHelp(false)}
+      />
+
+      {/* Teleprompter view */}
+      <TeleprompterView
+        isOpen={showTeleprompter}
+        onClose={() => setShowTeleprompter(false)}
+        content={teleprompterContent}
+      />
     </div>
   );
 }

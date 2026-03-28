@@ -1098,6 +1098,185 @@ Removed `https://*.supabase.co` from `img-src`, `media-src`, and `connect-src` s
 
 ---
 
+## Phase 14 — Script Structure, Creative Tools, Speed & Polish (Evolution Update) ✅
+
+**Completed:** March 27, 2026
+
+Transformed ScriptPad from a CRUD note app into a purpose-built script writing environment. Added structural awareness (Hook/Body/CTA sections), creative tools (line variants, hook scorer, scene annotations), speed features (keyboard shortcuts, teleprompter, split view), and export capabilities.
+
+### Phase 14.1 — Script Structure Awareness
+
+1. **ScriptSection Node** (`src/app/_components/editor/extensions/script-section.tsx`)
+   - Custom TipTap `Node` extension: wraps content in labeled, collapsible blocks
+   - Section types: `hook`, `body`, `cta`, `custom` — each with distinct accent color (amber/blue/emerald/gray)
+   - Header shows: collapse toggle (ChevronDown/Right), colored label (uppercase), per-section word count, estimated duration
+   - `draggable: true` for mouse-based reordering
+   - Collapsed state uses `max-height: 0; overflow: hidden` to hide content while preserving ProseMirror document structure
+
+2. **SceneNote Node** (`src/app/_components/editor/extensions/scene-note.tsx`)
+   - Inline atom `Node`: renders as a colored pill with icon
+   - Three note types with distinct styling:
+     - `broll` — Camera icon, purple (rgba(139, 92, 246))
+     - `direction` — Scissors icon, blue (rgba(59, 130, 246))
+     - `transition` — ArrowRight icon, amber (rgba(245, 158, 11))
+   - Click-to-edit inline input, backspace-to-delete
+   - Auto-opens in edit mode when inserted empty
+   - **Excluded from word count and duration** — atom nodes have no text content in ProseMirror's getText()
+
+3. **Timing Marks** (`src/app/_components/editor/extensions/timing-marks.ts`)
+   - ProseMirror `Plugin` with `Decoration.widget` at each paragraph boundary
+   - Shows cumulative time ("0:00", "0:15", "0:30") in left margin
+   - Computed from word count at configurable WPM (default 150)
+   - Excludes scene notes from calculation
+   - Styled: absolute positioned, JetBrains Mono, 10px, 35% opacity
+
+4. **Enhanced Stats Bar** (`src/app/_components/editor/stats-bar.tsx`)
+   - Now shows per-section breakdown below main stats when sections exist
+   - Each section: colored dot + label + word count + duration
+   - Uses `sectionStats` from editor store
+
+5. **Editor Store** (`src/stores/editor-store.ts`)
+   - Added `sectionStats: SectionStat[]` to state
+   - `SectionStat` type: `{ type, label, wordCount, durationSeconds }`
+   - `setStats` now accepts optional `sectionStats`
+
+6. **Stats Computation** (`tiptap-editor.tsx`)
+   - Replaced simple `editor.getText().split()` with `computeStats()` function
+   - Traverses document tree, excludes `sceneNote` nodes from word/char counts
+   - Computes per-section stats by finding all `scriptSection` nodes
+   - Returns both spoken-text stats and section breakdown
+
+7. **Schema** — Added `structureMetadata` jsonb column to `scriptpad_script` table for cross-script analytics
+8. **Scripts Router** — Updated `scripts.update` to accept and persist `structureMetadata`
+
+9. **Slash Commands** — Added 6 new commands:
+   - `/hook-section`, `/body-section`, `/cta-section` — insert individual sections
+   - `/structure` — insert all three (Hook + Body + CTA)
+   - `/scene`, `/broll` — insert B-roll scene note
+
+### Phase 14.2 — Creative Tools
+
+1. **Line Variants** (`src/app/_components/editor/extensions/line-variant.tsx`)
+   - Block-level atom `Node` with `variants` (string[]) and `activeIndex` attributes
+   - Cycle through variants with Cmd+Alt+Up/Down keyboard shortcuts
+   - Add variant button (+), expand/collapse to see all variants
+   - Inline editing per variant, remove individual variants
+   - `renderText()` returns only active variant — so word count, export, and teleprompter only use the selected version
+   - Counter display: "1/3", "2/3", etc.
+
+2. **Hook Strength Indicator** (`src/app/_components/editor/hook-scorer.ts`)
+   - Heuristic scoring function: `scoreHook(text) → HookScore`
+   - Six criteria (0-100 total):
+     - Question format (0-20): ends with "?"
+     - Statistics/numbers (0-15): contains digits, bonus for percentages
+     - Addresses "you" (0-15): you/your/you're count
+     - Power words (0-20): 40+ words like "secret", "proven", "mistake", "exactly"
+     - Length (0-15): ideal 8-20 words
+     - Urgency (0-15): "now", "today", "before", "don't wait"
+   - Three levels: weak (<35, red), medium (35-59, amber), strong (60+, green)
+   - Returns `suggestions[]` with actionable tips
+   - Integrated into Hook section header: colored dot + score number + tooltip with suggestions
+
+3. **Punch Up (AI Shell)** — Sparkle button in bubble menu
+   - On text selection, sends to `ai.punchUp` tRPC mutation
+   - Shows floating popover with rewritten text + "Replace with this" button
+   - Currently returns placeholder (stub router) — ready for real LLM in future
+   - `src/server/api/routers/ai.ts` — stub with `punchUp` and `scoreHook` mutations
+
+4. **AI Usage Table** — `scriptpad_ai_usage` table for future token tracking (userId, feature, inputTokens, outputTokens, createdAt)
+
+5. **Slash Commands** — Added 3 more:
+   - `/transition` — insert transition annotation
+   - `/direction` — insert direction note
+   - `/variant` — insert line variant block
+
+### Phase 14.3 — Speed & Flow
+
+1. **Keyboard Shortcuts Extension** (`src/app/_components/editor/extensions/keyboard-shortcuts.ts`)
+   - Replaced inline `CustomKeymap` with comprehensive extension
+   - Section shortcuts: Cmd+Shift+H (Hook), Cmd+Shift+B (Body), Cmd+Shift+C (CTA)
+   - Cmd+Shift+N — insert scene note
+   - Cmd+Shift+V — convert current paragraph to line variant
+   - Cmd+Shift+Minus — insert divider
+   - Cmd+Alt+Up/Down — reorder sections (swap with sibling via ProseMirror transactions)
+
+2. **Keyboard Help Modal** (`src/app/_components/editor/keyboard-help-modal.tsx`)
+   - Opens with Cmd+? — full shortcut reference organized by category
+   - Portal-rendered, Escape to close, backdrop click to close
+   - Categories: Formatting, Structure, Navigation, Views
+
+3. **Split View** (`script-editor-page.tsx`)
+   - Cmd+\\ toggles right panel (280px wide)
+   - Shows: script notes, quick actions (teleprompter, keyboard help), tags
+   - Hidden on mobile (`hidden lg:block`)
+   - Editor stays at `max-w-3xl`
+
+4. **Teleprompter Mode** (`src/app/_components/editor/teleprompter-view.tsx`)
+   - Full-screen overlay activated by Cmd+Enter
+   - `extractTeleprompterContent()` converts TipTap JSON to flat section list
+   - Section headers rendered as colored dividers
+   - Scene notes rendered dimmed (purple, 50% opacity, monospace)
+   - Line variants use only active variant text
+   - Controls bar: Play/Pause (Space), Speed +/- (arrows, 10-120 px/sec), Font size +/- (20-72px), Restart (R), Mirror mode (horizontal flip for teleprompter hardware), Exit (Escape)
+   - `requestAnimationFrame` loop for smooth scrolling
+   - Starts with 40vh top padding (content begins mid-screen)
+
+### Phase 14.4 — Polish & Export
+
+1. **Script Export** (`src/app/_components/editor/export-script.ts`)
+   - `exportToText(doc, options)` — converts TipTap JSON to plain text
+   - Two modes:
+     - **Spoken-only** (`includeAnnotations: false`): just the words you'd say, with section headers
+     - **Full with annotations** (`includeAnnotations: true`): includes `[B-ROLL: ...]`, `[TRANSITION: ...]`, `[DIRECTION: ...]`, and `[ALT N: ...]` for inactive line variants
+   - Title + underline header
+   - `copyToClipboard()` and `downloadAsFile()` utilities
+
+2. **Editor Header Export Menu** (`editor-header.tsx`)
+   - Three new items in "More" menu between Duplicate and Timestamps:
+     - "Copy spoken text" — clipboard, spoken-only
+     - "Copy with annotations" — clipboard, full
+     - "Download as .txt" — file download, sanitized filename
+
+3. **Updated Landing Page** (`landing-page.tsx`)
+   - New hero copy: "Write scripts that know their own structure."
+   - "Built for short-form creators" badge
+   - Three hero feature cards: Script Structure, Scene Annotations, Timing Marks
+   - 6-card power features grid: Line Variants, Hook Scorer, Teleprompter, Keyboard-First, Export, Organize
+   - Updated CTA: "Ready to write better scripts?"
+
+### Verification
+```
+SKIP_ENV_VALIDATION=1 pnpm typecheck → 0 TypeScript errors
+pnpm build → success, all routes compile cleanly
+pnpm db:push → schema applied (structureMetadata column + ai_usage table)
+```
+
+### Files created (10)
+- `src/app/_components/editor/extensions/script-section.tsx`
+- `src/app/_components/editor/extensions/scene-note.tsx`
+- `src/app/_components/editor/extensions/timing-marks.ts`
+- `src/app/_components/editor/extensions/line-variant.tsx`
+- `src/app/_components/editor/extensions/keyboard-shortcuts.ts`
+- `src/app/_components/editor/hook-scorer.ts`
+- `src/app/_components/editor/export-script.ts`
+- `src/app/_components/editor/keyboard-help-modal.tsx`
+- `src/app/_components/editor/teleprompter-view.tsx`
+- `src/server/api/routers/ai.ts`
+
+### Files modified (10)
+- `src/stores/editor-store.ts` — added sectionStats
+- `src/app/_components/editor/tiptap-editor.tsx` — registered all new extensions, computeStats(), punch up button
+- `src/app/_components/editor/slash-command-menu.tsx` — 9 new slash commands
+- `src/app/_components/editor/stats-bar.tsx` — per-section breakdown
+- `src/app/_components/editor/script-editor-page.tsx` — split view, teleprompter, keyboard help
+- `src/app/_components/editor/editor-header.tsx` — export menu items
+- `src/app/_components/landing-page.tsx` — full rewrite with new features
+- `src/server/db/schema.ts` — structureMetadata column + ai_usage table
+- `src/server/api/root.ts` — registered ai router
+- `src/styles/globals.css` — styles for sections, scene notes, timing marks, line variants, hook score
+
+---
+
 ## Infrastructure Notes
 
 - **Node.js:** v20.20.2 (installed via nvm)

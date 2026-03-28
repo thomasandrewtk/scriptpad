@@ -263,6 +263,7 @@ export const scriptsRouter = createTRPCRouter({
         postDate: z.string().nullable().optional(),
         notes: z.string().nullable().optional(),
         folderId: z.string().uuid().nullable().optional(),
+        structureMetadata: z.record(z.unknown()).nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -307,6 +308,7 @@ export const scriptsRouter = createTRPCRouter({
       if (input.status !== undefined) updateData.status = input.status;
       if (input.notes !== undefined) updateData.notes = input.notes;
       if (input.folderId !== undefined) updateData.folderId = input.folderId;
+      if (input.structureMetadata !== undefined) updateData.structureMetadata = input.structureMetadata;
 
       if (input.postDate !== undefined) {
         updateData.postDate = input.postDate
