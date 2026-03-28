@@ -1,10 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 import { Minus, Anchor, Calendar, StickyNote } from "lucide-react";
 import type { Editor } from "@tiptap/react";
-import { HookTemplatePicker } from "./hook-template-picker";
+
+const HookTemplatePicker = dynamic(
+  () =>
+    import("./hook-template-picker").then((m) => ({
+      default: m.HookTemplatePicker,
+    })),
+  { ssr: false },
+);
 
 const COMMANDS = [
   {

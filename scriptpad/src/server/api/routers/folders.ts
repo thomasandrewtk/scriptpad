@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { folders, scripts } from "~/server/db/schema";
+import { USER_LIMITS } from "~/server/api/limits";
 
 export const foldersRouter = createTRPCRouter({
   /**
@@ -64,6 +65,19 @@ export const foldersRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
+
+      // Enforce per-user folder limit
+      const [countResult] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(folders)
+        .where(eq(folders.userId, userId));
+
+      if ((countResult?.count ?? 0) >= USER_LIMITS.MAX_FOLDERS) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `You've reached the limit of ${USER_LIMITS.MAX_FOLDERS} folders. Delete some folders to create new ones.`,
+        });
+      }
 
       // Get the max sort order to append at end
       const maxOrder = await ctx.db

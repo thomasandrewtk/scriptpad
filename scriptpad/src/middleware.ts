@@ -52,9 +52,9 @@ const securityHeaders: Record<string, string> = {
     "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https://*.supabase.co",
-    "media-src 'self' blob: https://*.supabase.co",
-    "connect-src 'self' https://*.supabase.co",
+    "img-src 'self' data: blob:",
+    "media-src 'self' blob:",
+    "connect-src 'self'",
     "frame-ancestors 'none'",
   ].join("; "),
   "X-Frame-Options": "DENY",
@@ -74,12 +74,12 @@ export function middleware(request: NextRequest) {
     request.headers.get("x-real-ip") ??
     "unknown";
 
-  // Rate limit auth routes: 10 requests/minute
+  // Rate limit auth routes: 5 requests/minute (tighter for abuse prevention)
   const isAuthRoute =
     pathname.startsWith("/auth") || pathname.startsWith("/api/auth");
   if (isAuthRoute) {
     const key = `auth:${ip}`;
-    if (isRateLimited(key, 10, 60_000)) {
+    if (isRateLimited(key, 5, 60_000)) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429 },
@@ -87,11 +87,11 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Rate limit API routes: 100 requests/minute
+  // Rate limit API routes: 60 requests/minute
   const isApiRoute = pathname.startsWith("/api");
   if (isApiRoute && !isAuthRoute) {
     const key = `api:${ip}`;
-    if (isRateLimited(key, 100, 60_000)) {
+    if (isRateLimited(key, 60, 60_000)) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         { status: 429 },

@@ -8,8 +8,8 @@ import {
   scriptTags,
   tags,
   folders,
-  mediaAttachments,
 } from "~/server/db/schema";
+import { USER_LIMITS } from "~/server/api/limits";
 
 const scriptStatusSchema = z.enum(["idea", "writing", "ready", "posted"]);
 
@@ -194,13 +194,6 @@ export const scriptsRouter = createTRPCRouter({
         }
       }
 
-      // Get attachments
-      const attachments = await ctx.db
-        .select()
-        .from(mediaAttachments)
-        .where(eq(mediaAttachments.scriptId, script.id))
-        .orderBy(desc(mediaAttachments.uploadedAt));
-
       return {
         ...script,
         tags: scriptTagRows.map((t) => ({
@@ -209,7 +202,6 @@ export const scriptsRouter = createTRPCRouter({
           color: t.tagColor,
         })),
         folder,
-        attachments,
       };
     }),
 
@@ -228,6 +220,19 @@ export const scriptsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
+
+      // Enforce per-user script limit
+      const [countResult] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(scripts)
+        .where(and(eq(scripts.userId, userId), isNull(scripts.deletedAt)));
+
+      if ((countResult?.count ?? 0) >= USER_LIMITS.MAX_SCRIPTS) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `You've reached the limit of ${USER_LIMITS.MAX_SCRIPTS} scripts. Delete some scripts to create new ones.`,
+        });
+      }
 
       const [script] = await ctx.db
         .insert(scripts)
@@ -276,6 +281,21 @@ export const scriptsRouter = createTRPCRouter({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Script not found",
+        });
+      }
+
+      // Enforce body size limit
+      if (input.bodyPlainText !== undefined && input.bodyPlainText.length > USER_LIMITS.MAX_BODY_LENGTH) {
+        throw new TRPCError({
+          code: "PAYLOAD_TOO_LARGE",
+          message: `Script body exceeds the maximum of ${USER_LIMITS.MAX_BODY_LENGTH.toLocaleString()} characters.`,
+        });
+      }
+
+      if (input.notes !== undefined && input.notes !== null && input.notes.length > USER_LIMITS.MAX_NOTES_LENGTH) {
+        throw new TRPCError({
+          code: "PAYLOAD_TOO_LARGE",
+          message: `Notes exceed the maximum of ${USER_LIMITS.MAX_NOTES_LENGTH.toLocaleString()} characters.`,
         });
       }
 
@@ -360,6 +380,19 @@ export const scriptsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
+
+      // Enforce per-user script limit
+      const [countResult] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(scripts)
+        .where(and(eq(scripts.userId, userId), isNull(scripts.deletedAt)));
+
+      if ((countResult?.count ?? 0) >= USER_LIMITS.MAX_SCRIPTS) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `You've reached the limit of ${USER_LIMITS.MAX_SCRIPTS} scripts. Delete some scripts to create new ones.`,
+        });
+      }
 
       const original = await ctx.db.query.scripts.findFirst({
         where: and(

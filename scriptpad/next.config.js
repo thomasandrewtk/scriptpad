@@ -5,17 +5,16 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {
+let config = {
   output: "standalone",
-  images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**.supabase.co",
-        pathname: "/storage/v1/object/public/**",
-      },
-    ],
-  },
 };
+
+// Bundle analyzer — run with ANALYZE=true pnpm build
+if (process.env.ANALYZE === "true") {
+  const withBundleAnalyzer = (await import("@next/bundle-analyzer")).default({
+    enabled: true,
+  });
+  config = withBundleAnalyzer(config);
+}
 
 export default config;

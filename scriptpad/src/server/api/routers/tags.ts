@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { tags, scriptTags, scripts } from "~/server/db/schema";
+import { USER_LIMITS } from "~/server/api/limits";
 
 export const tagsRouter = createTRPCRouter({
   /**
@@ -63,6 +64,19 @@ export const tagsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
+
+      // Enforce per-user tag limit
+      const [countResult] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(tags)
+        .where(eq(tags.userId, userId));
+
+      if ((countResult?.count ?? 0) >= USER_LIMITS.MAX_TAGS) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `You've reached the limit of ${USER_LIMITS.MAX_TAGS} tags. Delete some tags to create new ones.`,
+        });
+      }
 
       // Check for duplicate name
       const existing = await ctx.db.query.tags.findFirst({

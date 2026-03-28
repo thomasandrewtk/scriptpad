@@ -13,15 +13,10 @@ export const env = createEnv({
       .default("development"),
     EMAIL_SERVER: z.string().optional(),
     EMAIL_FROM: z.string().optional(),
-    SUPABASE_URL: z.string().url().optional(),
-    SUPABASE_ANON_KEY: z.string().optional(),
-    SUPABASE_SERVICE_KEY: z.string().optional(),
   },
 
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url().optional(),
-    NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
   },
 
   runtimeEnv: {
@@ -30,12 +25,7 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     EMAIL_SERVER: process.env.EMAIL_SERVER,
     EMAIL_FROM: process.env.EMAIL_FROM,
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-    SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   },
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

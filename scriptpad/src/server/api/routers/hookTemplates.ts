@@ -1,9 +1,10 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { hookTemplates, tags } from "~/server/db/schema";
+import { USER_LIMITS } from "~/server/api/limits";
 
 export const hookTemplatesRouter = createTRPCRouter({
   /**
@@ -36,12 +37,25 @@ export const hookTemplatesRouter = createTRPCRouter({
   create: protectedProcedure
     .input(
       z.object({
-        body: z.string().min(1),
+        body: z.string().min(1).max(5000),
         tagId: z.string().uuid().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
+
+      // Enforce per-user hook template limit
+      const [countResult] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(hookTemplates)
+        .where(eq(hookTemplates.userId, userId));
+
+      if ((countResult?.count ?? 0) >= USER_LIMITS.MAX_HOOK_TEMPLATES) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `You've reached the limit of ${USER_LIMITS.MAX_HOOK_TEMPLATES} hook templates. Delete some to create new ones.`,
+        });
+      }
 
       const [template] = await ctx.db
         .insert(hookTemplates)

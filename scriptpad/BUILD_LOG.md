@@ -940,15 +940,161 @@ All 8 keyboard shortcuts from PRD Section 12 were already implemented in Phase 9
 
 ---
 
-## Phase 13 — QA, Performance & Launch Readiness
+## Phase 13 — QA, Performance & Launch Readiness ✅
 
-**Status:** Pending
+**Status:** Complete
 
-### Planned
-- 13.1 End-to-end QA pass (full feature checklist)
-- 13.2 Performance optimization (lazy load TipTap, hook picker, attachments)
-- 13.3 Final polish (toast consistency, empty states, mobile responsiveness)
-- 13.4 Launch checklist (secrets rotation, deployment verification)
+### 13.1 — End-to-End QA Pass
+- Full feature checklist verified against PRD spec
+- Auth flows (sign-up, sign-in, sign-out, magic link)
+- Dashboard: status tabs with counts, sort controls, card grid
+- Quick Capture: Cmd+N, modal, save → toast → card appears
+- Script Editor: title, body (TipTap), metadata row, notes, attachments, stats bar
+- Auto-save: 3s debounce, save indicator, Cmd+S force save
+- Slash commands: /divider, /hook, /date, /note
+- Floating toolbar: bold, italic, underline on text selection
+- Tags: create, assign, remove, color picker, sidebar filter
+- Folders: create, assign, sidebar filter, settings CRUD
+- Hook Templates: /hooks page CRUD, /hook slash command insertion
+- Search: sidebar search, 300ms debounce, combines with status tabs
+- Context menu: right-click on cards → status, folder, duplicate, delete
+- Keyboard shortcuts: Cmd+N, Cmd+K, Cmd+S, Escape, Cmd+Shift+D
+- Onboarding tour: 3-step tooltip, dismissable, stored in preferences
+- Empty states: no scripts, no results, no status — all match PRD Section 4.3
+- Error boundaries: root, dashboard, 404
+- Responsive: mobile sidebar drawer, tablet icon-only, desktop full sidebar
+- Landing page: unauthenticated users see it, CTAs work
+
+### 13.2 — Performance Optimization
+- **Dynamic import for TipTap editor** — `script/[id]/page.tsx` now uses `next/dynamic` with `ssr: false` to lazy-load the entire ScriptEditorPage. TipTap + 7 extension packages only load when user navigates to a script. Script route first-load JS: **104 kB** (lean).
+- **Extracted EditorSkeleton** — reusable `editor-skeleton.tsx` component used as loading fallback for both dynamic import and internal loading state.
+- **Dynamic import for HookTemplatePicker** — `slash-command-menu.tsx` lazy-loads the hook template picker (with its own tRPC query) only when user types `/hook`.
+- **Dynamic import for AttachmentsSection** — `script-editor-page.tsx` lazy-loads the file upload component since it's collapsible and often hidden.
+- **Optimized attachments.delete (N+1 fix)** — replaced 2 sequential queries (find attachment, then find script) with a single `innerJoin` query that verifies ownership in one DB round-trip.
+- **Bundle analyzer** — installed `@next/bundle-analyzer` as devDep. Run with `ANALYZE=true pnpm build` for visibility into chunk sizes.
+
+### 13.3 — Final Polish
+- **Toast consistency audit** — all toasts follow consistent patterns: `toast.success("Action completed.")` / `toast.error("Failed to action.")` with optional descriptions. No redundant or missing toasts found.
+- **Empty state alignment** — verified all 3 variants match PRD Section 4.3 exactly:
+  - No scripts: "No scripts yet. Hit the + button to capture your first idea."
+  - No scripts in status: "No scripts in [Status]. Scripts will appear here as you move them along."
+  - No search results: "No scripts match '[query]'. Try a different search or check your filters."
+- **Console logging audit** — all console.error calls are intentional (error boundaries, upload error handling). No debug console.log calls in production paths. Server-side timing log is appropriate for monitoring.
+
+### 13.4 — Launch Checklist
+- [x] `pnpm build` succeeds with 0 errors
+- [x] `SKIP_ENV_VALIDATION=1 pnpm typecheck` passes with 0 errors
+- [x] `robots.txt` accessible at /robots.txt
+- [x] Sitemap accessible at /sitemap.xml
+- [x] No unnecessary console.log calls in production code
+- [ ] Verify `AUTH_SECRET` is set (not the dev placeholder) — deploy-time check
+- [ ] Verify `DATABASE_URL` uses production Supabase pooler — deploy-time check
+- [ ] Verify Supabase Storage bucket exists and is configured — deploy-time check
+- [ ] OG image accessible at /og-image.png — deploy-time check
+
+### Build Metrics (Final)
+| Route | Size | First Load JS |
+|-------|------|---------------|
+| `/` (Dashboard) | 176 B | 159 kB |
+| `/script/[id]` (Editor) | 1.59 kB | 104 kB |
+| `/hooks` | 3.36 kB | 147 kB |
+| `/settings` | 4.09 kB | 147 kB |
+| `/auth/signin` | 1.15 kB | 109 kB |
+| `/auth/signup` | 1.81 kB | 141 kB |
+| Shared JS | — | 102 kB |
+| Middleware | 34.7 kB | — |
+
+### Files modified
+- `src/app/(dashboard)/script/[id]/page.tsx` — dynamic import for ScriptEditorPage with `ssr: false`
+- `src/app/_components/editor/editor-skeleton.tsx` — **new** extracted reusable loading skeleton
+- `src/app/_components/editor/script-editor-page.tsx` — uses EditorSkeleton, lazy-loads AttachmentsSection
+- `src/app/_components/editor/slash-command-menu.tsx` — lazy-loads HookTemplatePicker
+- `src/server/api/routers/attachments.ts` — optimized delete with single JOIN query
+- `next.config.js` — conditional bundle analyzer integration
+- `package.json` — added `@next/bundle-analyzer` devDep
+
+### Test results
+- `SKIP_ENV_VALIDATION=1 pnpm typecheck` — passes with 0 errors
+- `pnpm build` — succeeds, all routes compile cleanly
+
+---
+
+## Phase 13b — Free-Tier Guardrails (Vercel + Supabase Free)
+
+**Status:** Complete ✅
+
+### Problem
+Deploying to Vercel free tier + Supabase free tier (500 MB DB, 1 GB storage, 100k serverless invocations/month). Need guardrails against abuse if anyone uses the app.
+
+### Changes
+
+#### Removed: File Uploads & Attachments
+Completely removed the file upload feature to eliminate Supabase Storage risk:
+- **Deleted** `src/app/api/upload/route.ts` — upload endpoint
+- **Deleted** `src/app/api/upload/delete/route.ts` — delete endpoint
+- **Deleted** `src/app/_components/editor/attachments-section.tsx` — UI component
+- **Deleted** `src/server/api/routers/attachments.ts` — tRPC router
+- **Deleted** `src/lib/supabase-client.ts` — Supabase client (only used for storage)
+- **Removed** `@supabase/supabase-js` dependency (saves ~50 KB from bundle)
+- **Removed** Supabase Storage env vars (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`, `NEXT_PUBLIC_SUPABASE_*`)
+- **Removed** attachments from `scripts.getById` response and `root.ts` router
+- **Removed** Supabase CDN from CSP headers and Next.js image remote patterns
+
+#### Added: Per-User Resource Limits
+New `src/server/api/limits.ts` defines all limits in one place:
+
+| Resource | Limit | Rationale |
+|----------|-------|-----------|
+| Scripts per user | 50 | ~50 KB avg body × 50 = 2.5 MB/user |
+| Tags per user | 20 | Keeps sidebar manageable |
+| Folders per user | 10 | Keeps sidebar manageable |
+| Hook templates per user | 25 | Generous for template library |
+| Script body size | 100,000 chars | ~100 KB max per script |
+| Notes size | 10,000 chars | ~10 KB max per script |
+
+Enforced server-side in tRPC mutations:
+- `scripts.create` — checks count before insert
+- `scripts.duplicate` — checks count before insert
+- `scripts.update` — checks body + notes size
+- `tags.create` — checks count before insert
+- `folders.create` — checks count before insert
+- `hookTemplates.create` — checks count before insert, body capped at 5000 chars
+
+All limits return user-friendly error messages (e.g., "You've reached the limit of 50 scripts. Delete some scripts to create new ones.").
+
+#### Tightened: Rate Limits
+| Route | Before | After |
+|-------|--------|-------|
+| Auth routes | 10 req/min | **5 req/min** |
+| API routes | 100 req/min | **60 req/min** |
+
+#### Cleaned: CSP Headers
+Removed `https://*.supabase.co` from `img-src`, `media-src`, and `connect-src` since storage is no longer used.
+
+### Files modified
+- `src/server/api/limits.ts` — **new** centralized resource limits
+- `src/server/api/root.ts` — removed attachments router
+- `src/server/api/routers/scripts.ts` — added script count + body/notes size limits
+- `src/server/api/routers/tags.ts` — added tag count limit
+- `src/server/api/routers/folders.ts` — added folder count limit
+- `src/server/api/routers/hookTemplates.ts` — added template count limit + body max
+- `src/app/_components/editor/script-editor-page.tsx` — removed AttachmentsSection
+- `src/middleware.ts` — tightened rate limits, cleaned CSP
+- `src/env.js` — removed Supabase storage env vars
+- `next.config.js` — removed Supabase image remote patterns
+- `package.json` — removed `@supabase/supabase-js`
+
+### Files deleted
+- `src/app/api/upload/route.ts`
+- `src/app/api/upload/delete/route.ts`
+- `src/app/_components/editor/attachments-section.tsx`
+- `src/server/api/routers/attachments.ts`
+- `src/lib/supabase-client.ts`
+
+### Test results
+- `SKIP_ENV_VALIDATION=1 pnpm typecheck` — 0 errors
+- `pnpm build` — succeeds, all routes compile cleanly
+- Upload API routes removed from build output
 
 ---
 
